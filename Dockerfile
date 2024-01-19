@@ -14,4 +14,4 @@ FROM amazoncorretto:21
 
 WORKDIR /
 COPY --from=builder /coin-trader/${PROJECT_NAME}/build/libs/*.jar app.jar
-ENTRYPOINT["java", "-jar", "-Duser.timezone=Asia/Seoul", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "-Duser.timezone=Asia/Seoul", "/app.jar"]
