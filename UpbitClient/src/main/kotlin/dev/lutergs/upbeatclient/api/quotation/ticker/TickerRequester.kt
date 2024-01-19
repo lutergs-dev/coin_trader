@@ -2,7 +2,6 @@ package dev.lutergs.upbeatclient.api.quotation.ticker
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import dev.lutergs.upbeatclient.api.Param
 import dev.lutergs.upbeatclient.api.RequestDao
 import dev.lutergs.upbeatclient.dto.*
 import dev.lutergs.upbeatclient.webclient.Requester
@@ -12,20 +11,8 @@ import java.time.LocalTime
 
 class TickerRequester(requester: Requester) : RequestDao(requester) {
 
-    fun getTicker(request: TickerRequest): Flux<TickerResponse> {
+    fun getTicker(request: Markets): Flux<TickerResponse> {
         return this.requester.getMany("/ticker", request, TickerResponse::class)
-    }
-}
-
-data class TickerRequest(
-    val markets: List<MarketCode>
-): Param {
-    override fun toParameterString(): String {
-        return "markets=${markets.joinToString()}"
-    }
-
-    override fun toJwtTokenString(): String {
-        return markets.joinToString (separator = "&") { "markets[]=$it" }
     }
 }
 
@@ -53,7 +40,7 @@ data class TickerResponse(
     @JsonProperty("signed_change_rate")     val signedChangeRate: Double,
     @JsonProperty("trade_volume")           val tradeVolume: Double,
     @JsonProperty("acc_trade_price")        val accTradePrice: Double,
-    @JsonProperty("acc_trade_price_24h")    val accTracePrice24h: Double,
+    @JsonProperty("acc_trade_price_24h")    val accTradePrice24h: Double,
     @JsonProperty("acc_trade_volume")       val accTradeVolume: Double,
     @JsonProperty("acc_trade_volume_24h")   val accTradeVolume24h: Double,
     @JsonProperty("highest_52_week_price")  val highest52weekPrice: Double,

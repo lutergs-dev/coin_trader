@@ -1,0 +1,86 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  ENVS: "envs"
+
+# for AWS credentials and k8s setting
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+jobs:
+  publish-and-deploy:
+    runs-on: ubuntu-latest
+    environment: main
+    steps:
+      # checkout branch
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CONNECT_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: login to AWS ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push to ECR (manager)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-to-ecr.outputs.registry }}/${{ vars.MANAGER_ECR_REPOSITORY_NAME }}:${{ github.sha }}
+            ${{ steps.login-to-ecr.outputs.registry }}/${{ vars.MANAGER_ECR_REPOSITORY_NAME }}:latest
+          build-args: |
+            ACTIVE_PROFILES=${{ vars.PROFILE }}
+            PROJECT_NAME=TradeManager
+
+      - name: Build and Push to ECR (worker)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/arm64
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-to-ecr.outputs.registry }}/${{ vars.WORKER_ECR_REPOSITORY_NAME }}:${{ github.sha }}
+            ${{ steps.login-to-ecr.outputs.registry }}/${{ vars.WORKER_ECR_REPOSITORY_NAME }}:latest
+          build-args: |
+            ACTIVE_PROFILES=${{ vars.PROFILE }}
+            PROJECT_NAME=TradeWorker
+
+#      - name: install kubectl
+#        id: install-kubectl
+#        uses: azure/setup-kubectl@v3
+#        with:
+#          version: ${{ vars.K8S_VERSION }} # default is latest stable
+#
+#      - name: set k8s context
+#        id: set-k8s-context
+#        uses: azure/k8s-set-context@v1
+#        with:
+#          method: kubeconfig
+#          kubeconfig: ${{ secrets.K8S_CONFIG }} # Use secret (https://developer.github.com/actions/managing-workflows/storing-secrets/)
+#          context: #If left unspecified, current-context from kubeconfig is used as default
+#
+#      - name: refresh deployment
+#        id: refresh-k8s-deployment
+#        run: |
+#          kubectl rollout restart deployment ${{ vars.K8S_DEPLOYMENT_NAME }} -n ${{ vars.K8S_NAMESPACE }}

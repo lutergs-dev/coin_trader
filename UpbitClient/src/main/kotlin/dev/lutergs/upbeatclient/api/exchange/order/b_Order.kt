@@ -3,8 +3,8 @@ package dev.lutergs.upbeatclient.api.exchange.order
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import dev.lutergs.upbeatclient.dto.OffsetDateTimeDeserializer
-import dev.lutergs.upbeatclient.dto.UuidDeserializer
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import dev.lutergs.upbeatclient.dto.*
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -33,25 +33,30 @@ import java.util.UUID
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderResponse(
-    @JsonDeserialize(using = UuidDeserializer::class)
-    @JsonProperty("uuid")                 val uuid: UUID,
-    @JsonProperty("side")                 val side: String,
-    @JsonProperty("ord_type")             val orderType: String,
-    @JsonProperty("price")                val price: Double,
-    @JsonProperty("state")                val state: String,
-    @JsonProperty("market")               val market: String,
-    @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
-    @JsonProperty("created_at")           val createdAt: OffsetDateTime,
-    @JsonProperty("volume")               val volume: Double,
-    @JsonProperty("remaining_volume")     val remainingVolume: Double,
-    @JsonProperty("reserved_fee")         val reservedFee: Double,
-    @JsonProperty("remaining_fee")        val remainingFee: Double,
-    @JsonProperty("paid_fee")             val paidFee: Double,
-    @JsonProperty("locked")               val locked: Double,
-    @JsonProperty("executed_volume")      val executedVolume: Double,
-    @JsonProperty("trades_count")         val tradesCount: Int,
-    @JsonProperty("trades")               val trades: List<OrderTrade>
-)
+  @JsonDeserialize(using = UuidDeserializer::class)
+  @JsonProperty("uuid") val uuid: UUID,
+  @JsonProperty("side") val side: String,
+  @JsonProperty("ord_type") val orderType: String,
+  @JsonProperty("price") val price: Double,
+  @JsonProperty("state") val state: String,        // done 이 완료
+  @JsonSerialize(using = MarketCodeSerializer::class)
+  @JsonDeserialize(using = MarketCodeDeserializer::class)
+  @JsonProperty("market") val market: MarketCode,
+  @JsonSerialize(using = OffsetDateTimeSerializer::class)
+  @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
+  @JsonProperty("created_at") val createdAt: OffsetDateTime,
+  @JsonProperty("volume") val volume: Double,
+  @JsonProperty("remaining_volume") val remainingVolume: Double,
+  @JsonProperty("reserved_fee") val reservedFee: Double,
+  @JsonProperty("remaining_fee") val remainingFee: Double,
+  @JsonProperty("paid_fee") val paidFee: Double,
+  @JsonProperty("locked") val locked: Double,
+  @JsonProperty("executed_volume") val executedVolume: Double,
+  @JsonProperty("trades_count") val tradesCount: Int,
+  @JsonProperty("trades") val trades: List<OrderTrade>
+) {
+  fun isFinished() = this.state == "done"
+}
 
 /**
  * 체결 데이터를 나타내는 클래스
@@ -67,13 +72,13 @@ data class OrderResponse(
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderTrade(
-    @JsonProperty("market")         val market: String,
-    @JsonDeserialize(using = UuidDeserializer::class)
-    @JsonProperty("uuid")           val uuid: UUID,
-    @JsonProperty("price")          val price: Double,
-    @JsonProperty("volume")         val volume: Double,
-    @JsonProperty("funds")          val funds: Double,
-    @JsonProperty("side")           val side: String,
-    @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
-    @JsonProperty("created_at")     val createdAt: OffsetDateTime
+  @JsonProperty("market") val market: String,
+  @JsonDeserialize(using = UuidDeserializer::class)
+  @JsonProperty("uuid") val uuid: UUID,
+  @JsonProperty("price") val price: Double,
+  @JsonProperty("volume") val volume: Double,
+  @JsonProperty("funds") val funds: Double,
+  @JsonProperty("side") val side: String,
+  @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
+  @JsonProperty("created_at") val createdAt: OffsetDateTime
 )

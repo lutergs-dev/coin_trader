@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: "CoinTraderManager"
+  data:
+    mongodb:
+      uri: mongodb+srv://${MONGO_USERNAME:'username'}:${MONGO_PASSWORD:'password'}@${MONGO_URL:'url'}/${MONGO_DATABASE:'db'}?retryWrites=true&w=majority
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    listener:
+      client-id: "CoinTraderManager"
+    consumer:
+      group-id: "CoinTraderManager"
+    properties:
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY}' password='${KAFKA_API_SECRET}';
+
+custom:
+  upbit:
+    access-key: ${UPBIT_ACCESS_KEY}
+    secret-key: ${UPBIT_SECRET_KEY}
+  kubernetes:
+    namespace: ${KUBERNETES_NAMESPACE}
+    image:
+      pull-secret-name: ${KUBERNETES_IMAGE_PULL_SECRET_NAME}
+      pull-policy: ${KUBERNETES_IMAGE_PULL_POLICY}
+      name: ${KUBERNETES_IMAGE_NAME}
+    env-secret-name: ${KUBERNETES_ENV_SECRET_NAME}
+    kube-config-location: ${KUBERNETES_KUBECONFIG_LOCATION}

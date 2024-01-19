@@ -58,4 +58,25 @@ data class PlaceOrderResponse(
     @JsonDeserialize(using = NumberStringDeserializer::class)
     @JsonProperty("executed_volume")       val executedVolume: Double,
     @JsonProperty("trades_count")          val tradesCount: Int
-)
+) {
+    fun toOrderResponse(): OrderResponse {
+        return OrderResponse(
+          uuid = this.uuid,
+          side = this.side,
+          orderType = this.ordType,
+          price = this.price,
+          state = this.state,
+          market = this.market,
+          createdAt = this.createdAt,
+          volume = this.volume,
+          remainingVolume = this.remainingVolume,
+          reservedFee = this.reservedFee,
+          remainingFee = this.remainingFee,
+          paidFee = this.paidFee,
+          locked = this.locked,
+          executedVolume = this.executedVolume,
+          tradesCount = this.tradesCount,
+          trades = listOf()
+        )
+    }
+}

@@ -20,23 +20,23 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.1")
-//    implementation("io.projectreactor.netty:reactor-netty-http:1.1.15")
-    implementation("io.projectreactor:reactor-core:3.6.2")
-    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
+    implementation(project(":UpbitClient"))
 
-    implementation("com.fasterxml.jackson.core:jackson-core:2.16.1")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.1")
+    implementation("org.springframework.kafka:spring-kafka:3.0.10")
+    implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.0.4")
+
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
 
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
+    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
 
-    implementation("com.auth0:java-jwt:4.4.0")
+    implementation("io.kubernetes:client-java:15.0.1")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.1")
+    testImplementation("org.springframework.boot:spring-boot-starter-test:3.1.0")
     testImplementation("io.projectreactor:reactor-test:3.5.4")
+    testImplementation("org.springframework.kafka:spring-kafka-test:3.0.4")
 }
 
 tasks.withType<KotlinCompile> {

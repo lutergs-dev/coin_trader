@@ -1,0 +1,27 @@
+custom:
+  id: ${APP_ID}
+  kafka:
+    url: ${KAFKA_REST_PROXY_URL}
+    cluster:
+      name: ${KAFKA_CLUSTER_NAME}
+    api:
+      key: ${KAFKA_API_KEY}
+      secret: ${KAFKA_API_SECRET}
+    topic:
+      alarm: ${KAFKA_ALARM_TOPIC_NAME}
+      trade-result: ${KAFKA_TRADE_RESULT_NAME}
+  db:
+    descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
+    username: ${ORACLE_USERNAME:'username'}
+    password: ${ORACLE_PASSWORD:'password'}
+    max-conn: ${ORACLE_MAX_CONN:3}
+    min-conn: ${ORACLE_MIN_CONN:1}
+  trade:
+    start-market: ${START_MARKET}
+    start-money: ${START_MONEY}
+  upbit:
+    access-key: ${UPBIT_ACCESS_KEY}
+    secret-key: ${UPBIT_SECRET_KEY}
+
+
+

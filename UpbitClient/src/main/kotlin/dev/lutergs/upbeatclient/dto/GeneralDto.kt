@@ -58,7 +58,8 @@ enum class Ordering {
 }
 
 enum class OrderSide {
-    ASK, BID;
+    ASK,    // 매도
+    BID;    // 매수
     companion object {
         fun fromRawString(s: String): OrderSide {
             return when (s) {
@@ -72,4 +73,22 @@ enum class OrderSide {
 
 enum class OrderType {
     LIMIT, PRICE, MARKET
+}
+
+data class Markets(
+    val markets: List<MarketCode>
+): Param {
+    override fun toParameterString(): String {
+        return "markets=${markets.joinToString()}"
+    }
+
+    override fun toJwtTokenString(): String {
+        return markets.joinToString (separator = "&") { "markets[]=$it" }
+    }
+
+    companion object {
+        fun fromMarket(market: MarketCode): Markets {
+            return Markets(listOf(market))
+        }
+    }
 }

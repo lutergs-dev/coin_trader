@@ -1,0 +1,6 @@
+custom:
+  trade:
+    sell:
+      profit-percent: 1
+      loss-percent: 5
+      wait-hour: 6
