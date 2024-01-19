@@ -20,10 +20,6 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
     // set current timezone to Seoul
     TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"))
 
-    // set kubernetes default client
-    environment.getProperty("custom.kubernetes.kube-config-location")
-      ?.let { this.setKubernetesClient(it) }
-      ?: throw IllegalStateException("kubernetes 와 상호작용하기 위한 필수요건이 성립되지 않았습니다.")
 
     this.logger.info(String.format("Inject variable info to Spring complete! current env is %s", envName))
     this.printCurrentProperties(environment)
@@ -38,10 +34,5 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
       .forEach { propName: String? ->
         System.out.printf("\t\t%s : %s%n", propName, environment.getProperty(propName!!))
       }
-  }
-
-  private fun setKubernetesClient(fileLocation: String) {
-    Config.fromConfig(fileLocation)
-      .let { Configuration.setDefaultApiClient(it) }
   }
 }

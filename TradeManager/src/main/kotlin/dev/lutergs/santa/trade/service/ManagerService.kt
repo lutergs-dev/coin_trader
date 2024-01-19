@@ -9,8 +9,10 @@ import dev.lutergs.upbeatclient.api.quotation.ticker.TickerResponse
 import dev.lutergs.upbeatclient.dto.MarketCode
 import dev.lutergs.upbeatclient.dto.Markets
 import dev.lutergs.upbeatclient.webclient.BasicClient
+import io.kubernetes.client.openapi.Configuration
 import io.kubernetes.client.openapi.apis.CoreV1Api
 import io.kubernetes.client.openapi.models.*
+import io.kubernetes.client.util.Config
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.annotation.KafkaListener
@@ -27,8 +29,13 @@ class ManagerService(
   private val repository: DangerCoinRepository,
   private val kubernetesInfo: KubernetesInfo,
   @Value("\${custom.trade.worker.max-money}") private val maxMoney: Int,
-  @Value("\${custom.trade.worker.min-money}") private val minMoney: Int
+  @Value("\${custom.trade.worker.min-money}") private val minMoney: Int,
+  @Value("\${custom.kubernetes.kube-config-location}") kubeconfigLocation: String
 ) {
+  init {
+    Config.fromConfig(kubeconfigLocation)
+      .let { Configuration.setDefaultApiClient(it) }
+  }
   private val api = CoreV1Api()
 
   @KafkaListener(topics = ["trade-result"])
