@@ -5,7 +5,7 @@ spring:
     mongodb:
       uri: mongodb+srv://${MONGO_USERNAME:'username'}:${MONGO_PASSWORD:'password'}@${MONGO_URL:'url'}/${MONGO_DATABASE:'db'}?retryWrites=true&w=majority
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-server}
     listener:
       client-id: "CoinTraderManager"
     consumer:
