@@ -2,12 +2,18 @@ package dev.lutergs.santa.trade
 
 import io.kubernetes.client.openapi.Configuration
 import io.kubernetes.client.util.Config
+import io.kubernetes.client.util.KubeConfig
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertySource
+import org.springframework.core.env.get
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.FileReader
+import java.io.Reader
 import java.util.*
 
 class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPreparedEvent> {
@@ -29,12 +35,18 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
 
   private fun setKubernetesClient(environment: ConfigurableEnvironment) {
     try {
-      environment.getProperty("custom.kubernetes.kube-config-location")
-        ?.run { Config.fromConfig(this)
-          .run { Configuration.setDefaultApiClient(this) }
-        } ?: this.logger.info("kubernetes kubeconfig 파일이 존재하지 않습니다. Kubernetes 를 설정하지 않습니다.")
+      val configFileLocation = environment.getProperty("custom.kubernetes.kube-config-location")
+      if (configFileLocation != null) {
+        val fileReader = FileReader(File(configFileLocation))
+        val config = Config.fromConfig(fileReader)
+        Configuration.setDefaultApiClient(config)
+      } else {
+        this.logger.info("kubernetes kubeconfig 파일이 존재하지 않습니다. Kubernetes 를 설정하지 않습니다.")
+      }
     } catch (e: IllegalArgumentException) {
       this.logger.error("kubeconfig placeholder 를 resolve 하지 못했습니다. Kubernetes 를 설정하지 않습니다.")
+    } catch (e: FileNotFoundException) {
+      this.logger.error("kubeconfig 이 존재하지 않습니다.")
     }
   }
 
