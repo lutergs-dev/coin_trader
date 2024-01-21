@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
+import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
@@ -109,6 +110,7 @@ class ManagerService(
       .take(25)
       .flatMap {
         this.getPriorityAndTradeable(it)
+          .delayElement(Duration.ofMillis(100))
           .flatMap { priorityAndTradable ->
             if (priorityAndTradable.t2) Mono.just(Pair(it, priorityAndTradable.t1))
             else Mono.empty()
