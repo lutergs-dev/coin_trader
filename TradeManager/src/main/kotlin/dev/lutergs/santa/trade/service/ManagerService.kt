@@ -29,13 +29,9 @@ class ManagerService(
   private val repository: DangerCoinRepository,
   private val kubernetesInfo: KubernetesInfo,
   @Value("\${custom.trade.worker.max-money}") private val maxMoney: Int,
-  @Value("\${custom.trade.worker.min-money}") private val minMoney: Int,
-  @Value("\${custom.kubernetes.kube-config-location}") kubeconfigLocation: String
+  @Value("\${custom.trade.worker.min-money}") private val minMoney: Int
 ) {
-  
-  private val api = Config.fromConfig(kubeconfigLocation)
-    .let { Configuration.setDefaultApiClient(it) }
-    .let { CoreV1Api() }
+  private val api = CoreV1Api()
 
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {
