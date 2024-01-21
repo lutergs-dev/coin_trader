@@ -11,7 +11,7 @@ spring:
     consumer:
       group-id: "CoinTraderManager"
     properties:
-      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY}' password='${KAFKA_API_SECRET}';
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY:api_key}' password='${KAFKA_API_SECRET:api_secret}';
 
 custom:
   upbit:
