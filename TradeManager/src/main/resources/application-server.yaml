@@ -15,13 +15,13 @@ spring:
 
 custom:
   upbit:
-    access-key: ${UPBIT_ACCESS_KEY}
-    secret-key: ${UPBIT_SECRET_KEY}
+    access-key: ${UPBIT_ACCESS_KEY:access-key}
+    secret-key: ${UPBIT_SECRET_KEY:secret-key}
   kubernetes:
-    namespace: ${KUBERNETES_NAMESPACE}
+    namespace: ${KUBERNETES_NAMESPACE:default}
     image:
-      pull-secret-name: ${KUBERNETES_IMAGE_PULL_SECRET_NAME}
-      pull-policy: ${KUBERNETES_IMAGE_PULL_POLICY}
-      name: ${KUBERNETES_IMAGE_NAME}
-    env-secret-name: ${KUBERNETES_ENV_SECRET_NAME}
+      pull-secret-name: ${KUBERNETES_IMAGE_PULL_SECRET_NAME:image-pull-secret}
+      pull-policy: ${KUBERNETES_IMAGE_PULL_POLICY:IfNotPresent}
+      name: ${KUBERNETES_IMAGE_NAME:coin-trade-worker}
+    env-secret-name: ${KUBERNETES_ENV_SECRET_NAME:env-secret-name}
     kube-config-location: ${KUBERNETES_KUBECONFIG_LOCATION:/var/kube/config}
