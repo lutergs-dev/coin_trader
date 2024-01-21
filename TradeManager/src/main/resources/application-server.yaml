@@ -24,4 +24,4 @@ custom:
       pull-policy: ${KUBERNETES_IMAGE_PULL_POLICY}
       name: ${KUBERNETES_IMAGE_NAME}
     env-secret-name: ${KUBERNETES_ENV_SECRET_NAME}
-    kube-config-location: ${KUBERNETES_KUBECONFIG_LOCATION}
+    kube-config-location: ${KUBERNETES_KUBECONFIG_LOCATION:/var/kube/config}
