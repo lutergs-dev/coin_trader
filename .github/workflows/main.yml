@@ -44,10 +44,14 @@ jobs:
           gradle-version: 8.5
 
       - name: Build JAR (manager)
-        run: gradle TradeManager:bootJar
+        run: |
+          echo "spring.profiles.active=server" > ./TradeManager/src/main/resources/application.properties
+          gradle TradeManager:bootJar
 
       - name: Build JAR (worker)
-        run: gradle TradeWorker:bootJar
+        run: |
+          echo "spring.profiles.active=server" > ./TradeWorker/src/main/resources/application.properties
+          gradle TradeWorker:bootJar
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
