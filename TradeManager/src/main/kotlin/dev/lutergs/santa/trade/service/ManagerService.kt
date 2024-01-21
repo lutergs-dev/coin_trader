@@ -32,11 +32,10 @@ class ManagerService(
   @Value("\${custom.trade.worker.min-money}") private val minMoney: Int,
   @Value("\${custom.kubernetes.kube-config-location}") kubeconfigLocation: String
 ) {
-  init {
-    Config.fromConfig(kubeconfigLocation)
-      .let { Configuration.setDefaultApiClient(it) }
-  }
-  private val api = CoreV1Api()
+  
+  private val api = Config.fromConfig(kubeconfigLocation)
+    .let { Configuration.setDefaultApiClient(it) }
+    .let { CoreV1Api() }
 
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {

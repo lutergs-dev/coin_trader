@@ -20,9 +20,22 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
     // set current timezone to Seoul
     TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"))
 
+    // set kubernetes default client
+    this.setKubernetesClient(environment)
 
     this.logger.info(String.format("Inject variable info to Spring complete! current env is %s", envName))
     this.printCurrentProperties(environment)
+  }
+
+  private fun setKubernetesClient(environment: ConfigurableEnvironment) {
+    try {
+      environment.getProperty("custom.kubernetes.kube-config-location")
+        ?.run { Config.fromConfig(this)
+          .run { Configuration.setDefaultApiClient(this) }
+        } ?: this.logger.info("kubernetes kubeconfig 파일이 존재하지 않습니다. Kubernetes 를 설정하지 않습니다.")
+    } catch (e: IllegalArgumentException) {
+      this.logger.error("kubeconfig placeholder 를 resolve 하지 못했습니다. Kubernetes 를 설정하지 않습니다.")
+    }
   }
 
   private fun printCurrentProperties(environment: ConfigurableEnvironment) {

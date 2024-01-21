@@ -32,7 +32,7 @@ jobs:
         id: login-to-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build JARs
+      - name: set Java
         uses: actions/setup-java@v4
         with:
           distribution: corretto
@@ -41,13 +41,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          gradle-version: 8.4
+          gradle-version: 8.5
 
       - name: Build JAR (manager)
-        run: ./gradlew TradeManager:bootJar
+        run: gradle TradeManager:bootJar
 
       - name: Build JAR (worker)
-        run: ./gradlew TradeWorker:bootJar
+        run: gradle TradeWorker:bootJar
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

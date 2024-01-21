@@ -4,10 +4,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.builder.SpringApplicationBuilder
 
 @SpringBootApplication
-class TradeAgentApplication
+class TradeManagerApplication
 
 fun main(args: Array<String>) {
-    SpringApplicationBuilder(TradeAgentApplication::class.java)
+    SpringApplicationBuilder(TradeManagerApplication::class.java)
       .listeners(ApplicationContextInjector())
       .run()
 }
