@@ -1,15 +1,15 @@
 custom:
-  id: ${APP_ID}
+  id: ${APP_ID:app-id}
   kafka:
-    url: ${KAFKA_REST_PROXY_URL}
+    url: ${KAFKA_REST_PROXY_URL:kafka-rest-proxy-url}
     cluster:
-      name: ${KAFKA_CLUSTER_NAME}
+      name: ${KAFKA_CLUSTER_NAME:cluster-name}
     api:
-      key: ${KAFKA_API_KEY}
-      secret: ${KAFKA_API_SECRET}
+      key: ${KAFKA_API_KEY:kafka-api-key}
+      secret: ${KAFKA_API_SECRET:kafka-api-secret}
     topic:
-      alarm: ${KAFKA_ALARM_TOPIC_NAME}
-      trade-result: ${KAFKA_TRADE_RESULT_NAME}
+      alarm: ${KAFKA_ALARM_TOPIC_NAME:alarm}
+      trade-result: ${KAFKA_TRADE_RESULT_NAME:trade-result}
   db:
     descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
     username: ${ORACLE_USERNAME:'username'}
@@ -17,11 +17,11 @@ custom:
     max-conn: ${ORACLE_MAX_CONN:3}
     min-conn: ${ORACLE_MIN_CONN:1}
   trade:
-    start-market: ${START_MARKET}
-    start-money: ${START_MONEY}
+    start-market: ${START_MARKET:KRW-BTC}
+    start-money: ${START_MONEY:10000}
   upbit:
-    access-key: ${UPBIT_ACCESS_KEY}
-    secret-key: ${UPBIT_SECRET_KEY}
+    access-key: ${UPBIT_ACCESS_KEY:upbit-access-key}
+    secret-key: ${UPBIT_SECRET_KEY:upbit-secret-key}
 
 
 

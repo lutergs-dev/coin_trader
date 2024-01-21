@@ -45,10 +45,12 @@ jobs:
 
       - name: Build JAR (manager)
         run: |
+          echo "spring.profiles.active=server" > ./TradeManager/src/main/resources/application.properties
           gradle TradeManager:bootJar
 
       - name: Build JAR (worker)
         run: |
+          echo "spring.profiles.active=server" > ./TradeWorker/src/main/resources/application.properties
           gradle TradeWorker:bootJar
 
       - name: Set up QEMU
