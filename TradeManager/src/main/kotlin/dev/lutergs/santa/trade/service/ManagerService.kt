@@ -9,10 +9,8 @@ import dev.lutergs.upbeatclient.api.quotation.ticker.TickerResponse
 import dev.lutergs.upbeatclient.dto.MarketCode
 import dev.lutergs.upbeatclient.dto.Markets
 import dev.lutergs.upbeatclient.webclient.BasicClient
-import io.kubernetes.client.openapi.ApiException
-import io.kubernetes.client.openapi.apis.CoreV1Api
+import io.kubernetes.client.openapi.apis.BatchV1Api
 import io.kubernetes.client.openapi.models.*
-import jakarta.annotation.PostConstruct
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -33,7 +31,7 @@ class ManagerService(
   @Value("\${custom.trade.worker.max-money}") private val maxMoney: Int,
   @Value("\${custom.trade.worker.min-money}") private val minMoney: Int
 ) {
-  private val api = CoreV1Api()
+  private val api = BatchV1Api()
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
 
   @KafkaListener(topics = ["trade-result"])
@@ -53,12 +51,12 @@ class ManagerService(
           .flatMap { ticker ->
             if (totalMoney.get() >= this.maxMoney) {
               this.initK8sWorker(ticker.market, this.maxMoney)
-                .also { this.logger.info("initiated worker = {}, total money = {}", it, totalMoney.get()) }
+                .also { this.logger.info("total money = {}, initiated worker = {}", totalMoney.get(), it) }
               totalMoney.addAndGet(-this.maxMoney)
               Mono.just(true)
             } else if (totalMoney.get() < this.maxMoney && totalMoney.get() >= this.minMoney) {
               this.initK8sWorker(ticker.market, totalMoney.get())
-                .also { this.logger.info("initiated worker = {}, total money = {}", it, totalMoney.get()) }
+                .also { this.logger.info("total money = {}, initiated worker = {}", totalMoney.get(), it) }
               totalMoney.set(0)
               Mono.just(true)
             } else {
@@ -68,37 +66,49 @@ class ManagerService(
       }
   }
 
-  private fun initK8sWorker(market: MarketCode, money: Int): V1Pod {
+  private fun initK8sWorker(market: MarketCode, money: Int): V1Job {
     val generatedStr = Util.generateRandomString()
-    return V1Pod()
-      .apiVersion("v1")
-      .kind("Pod")
+    return V1Job()
+      .apiVersion("batch/v1")
+      .kind("Job")
       .metadata(
         V1ObjectMeta()
           .name("coin-trade-worker-${generatedStr}")
           .namespace(this.kubernetesInfo.namespace)
-          .labels(mapOf(Pair("sidecar.istio.io/inject", "false")))
       )
       .spec(
-        V1PodSpec()
-          .imagePullSecrets(listOf(V1LocalObjectReference()
-            .name(this.kubernetesInfo.imagePullSecretName)
-          ))
-          .containers(listOf(V1Container()
-            .name("coin-trade-worker")
-            .image(this.kubernetesInfo.imageName)
-            .imagePullPolicy(this.kubernetesInfo.imagePullPolicy)
-            .envFrom(listOf(V1EnvFromSource()
-              .secretRef(V1SecretEnvSource().name(this.kubernetesInfo.envSecretName))
-            ))
-            .env(listOf(
-              V1EnvVar().name("START_MARKET").value(market.toString()),
-              V1EnvVar().name("START_MONEY").value(money.toString()),
-              V1EnvVar().name("APP_ID").value(generatedStr)
-            ))
-          ))
-      ).let {
-        this.api.createNamespacedPod(this.kubernetesInfo.namespace, it, null, null, null, null)
+        V1JobSpec()
+          .backoffLimit(3)
+          .template(
+            V1PodTemplateSpec()
+              .metadata(
+                V1ObjectMeta()
+                  .name("coin-trade-worker-${generatedStr}")
+                  .namespace(this.kubernetesInfo.namespace)
+                  .labels(mapOf(Pair("sidecar.istio.io/inject", "false")))
+              ).spec(
+                V1PodSpec()
+                  .imagePullSecrets(listOf(V1LocalObjectReference()
+                    .name(this.kubernetesInfo.imagePullSecretName)
+                  ))
+                  .containers(listOf(V1Container()
+                    .name("coin-trade-worker")
+                    .image(this.kubernetesInfo.imageName)
+                    .imagePullPolicy(this.kubernetesInfo.imagePullPolicy)
+                    .envFrom(listOf(V1EnvFromSource()
+                      .secretRef(V1SecretEnvSource().name(this.kubernetesInfo.envSecretName))
+                    ))
+                    .env(listOf(
+                      V1EnvVar().name("START_MARKET").value(market.toString()),
+                      V1EnvVar().name("START_MONEY").value(money.toString()),
+                      V1EnvVar().name("APP_ID").value(generatedStr)
+                    ))
+                  ))
+              )
+          )
+      )
+      .let {
+        this.api.createNamespacedJob(this.kubernetesInfo.namespace, it, null, null, null, null)
       }
   }
 
