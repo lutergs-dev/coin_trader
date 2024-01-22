@@ -36,24 +36,10 @@ class ManagerService(
   private val api = CoreV1Api()
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
 
-  @PostConstruct
-  fun test() {
-    this.initWorker()
-      .onErrorComplete {
-        if (it is ApiException) {
-          println(it.responseBody)
-          println(it.responseHeaders)
-          println(it.localizedMessage)
-        }
-        it is ApiException
-      }
-      .blockLast()
-  }
-
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {
     // consume 뜻 --> 거래 완료되었고, 이제 돈이 다시 있다.
-//    this.initWorker().blockLast()
+    this.initWorker().blockLast()
   }
 
   private fun initWorker(): Flux<Boolean> {

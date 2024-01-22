@@ -33,6 +33,7 @@ class WorkerService(
   @Value("\${custom.trade.sell.wait-hour}") waitHour: Long,
   @Value("\${custom.trade.sell.profit-percent}") profitPercent: Double,
   @Value("\${custom.trade.sell.loss-percent}") lossPercent: Double,
+  @Value("\${custom.trade.watch.interval}") private val watchInterval: Int,
   @Value("\${custom.id}") private val serviceId: String
 ) {
   private val waitDuration = Duration.ofHours(waitHour)
@@ -88,7 +89,7 @@ class WorkerService(
           // log
           LocalDateTime.now()
             .also { l ->
-              if (l.second == 0) {
+              if (l.second < this.watchInterval) {
                 Duration.between(it.t1.createdAt.toLocalDateTime(), l)
                   .also { d ->
                     val hours = d.toHours()
@@ -117,7 +118,7 @@ class WorkerService(
             Mono.empty()
           }
         }.repeatWhenEmpty(Integer.MAX_VALUE) {
-          it.delayElements(Duration.ofSeconds(1))
+          it.delayElements(Duration.ofSeconds(this.watchInterval.toLong()))
         }.flatMap { sellResponse ->
           this.repository.finishSellOrder(buyOrder, sellResponse)
         }.timeout(this.waitDuration)
