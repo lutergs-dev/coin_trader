@@ -9,10 +9,10 @@ import dev.lutergs.upbeatclient.api.quotation.ticker.TickerResponse
 import dev.lutergs.upbeatclient.dto.MarketCode
 import dev.lutergs.upbeatclient.dto.Markets
 import dev.lutergs.upbeatclient.webclient.BasicClient
-import io.kubernetes.client.openapi.Configuration
+import io.kubernetes.client.openapi.ApiException
 import io.kubernetes.client.openapi.apis.CoreV1Api
 import io.kubernetes.client.openapi.models.*
-import io.kubernetes.client.util.Config
+import jakarta.annotation.PostConstruct
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -23,7 +23,6 @@ import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.logging.Level
 import kotlin.math.roundToInt
 
 @Component
@@ -35,20 +34,26 @@ class ManagerService(
   @Value("\${custom.trade.worker.min-money}") private val minMoney: Int
 ) {
   private val api = CoreV1Api()
+  private val logger = LoggerFactory.getLogger(ManagerService::class.java)
 
-  init {
-    val logger = LoggerFactory.getLogger("test")
-    this.findApplicableCoin()
-      .log("test", Level.ALL)
-      .subscribe {
-        logger.info("data = {}", it)
+  @PostConstruct
+  fun test() {
+    this.initWorker()
+      .onErrorComplete {
+        if (it is ApiException) {
+          println(it.responseBody)
+          println(it.responseHeaders)
+          println(it.localizedMessage)
+        }
+        it is ApiException
       }
+      .blockLast()
   }
 
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {
     // consume 뜻 --> 거래 완료되었고, 이제 돈이 다시 있다.
-    this.initWorker().blockLast()
+//    this.initWorker().blockLast()
   }
 
   private fun initWorker(): Flux<Boolean> {
@@ -59,13 +64,15 @@ class ManagerService(
       .flatMapMany { totalRawMoney ->
         val totalMoney = AtomicInteger(totalRawMoney)
         this.findApplicableCoin()
-          .flatMap {
+          .flatMap { ticker ->
             if (totalMoney.get() >= this.maxMoney) {
-              this.initK8sWorker(it.market, this.maxMoney.toDouble())
+              this.initK8sWorker(ticker.market, this.maxMoney)
+                .also { this.logger.info("initiated worker = {}, total money = {}", it, totalMoney.get()) }
               totalMoney.addAndGet(-this.maxMoney)
               Mono.just(true)
             } else if (totalMoney.get() < this.maxMoney && totalMoney.get() >= this.minMoney) {
-              this.initK8sWorker(it.market, totalMoney.get().toDouble())
+              this.initK8sWorker(ticker.market, totalMoney.get())
+                .also { this.logger.info("initiated worker = {}, total money = {}", it, totalMoney.get()) }
               totalMoney.set(0)
               Mono.just(true)
             } else {
@@ -75,9 +82,9 @@ class ManagerService(
       }
   }
 
-  private fun initK8sWorker(market: MarketCode, money: Double) {
+  private fun initK8sWorker(market: MarketCode, money: Int): V1Pod {
     val generatedStr = Util.generateRandomString()
-    V1Pod()
+    return V1Pod()
       .apiVersion("v1")
       .kind("Pod")
       .metadata(
@@ -93,7 +100,7 @@ class ManagerService(
           ))
           .containers(listOf(V1Container()
             .name("coin-trade-worker")
-            .image("${this.kubernetesInfo.imageName}:latest")
+            .image(this.kubernetesInfo.imageName)
             .imagePullPolicy(this.kubernetesInfo.imagePullPolicy)
             .envFrom(listOf(V1EnvFromSource()
               .secretRef(V1SecretEnvSource().name(this.kubernetesInfo.envSecretName))

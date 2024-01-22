@@ -11,5 +11,5 @@ spring:
 custom:
   trade:
     worker:
-      max-money: 100    # worker 는 최대 100만원을 가지고 거래 가능
-      min-money: 20     # worker 는 최소 20만원부터 거래 시작
+      max-money: 1000000    # worker 는 최대 100만원을 가지고 거래 가능
+      min-money: 200000     # worker 는 최소 20만원부터 거래 시작
