@@ -7,8 +7,8 @@ import dev.lutergs.santa.trade.worker.domain.UpbitClient
 import dev.lutergs.santa.trade.worker.domain.LogRepository
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
-import dev.lutergs.upbeatclient.dto.MarketCode
-import dev.lutergs.upbeatclient.webclient.BasicClient
+import dev.lutergs.upbitclient.dto.MarketCode
+import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

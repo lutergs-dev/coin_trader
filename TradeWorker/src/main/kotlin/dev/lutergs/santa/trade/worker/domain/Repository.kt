@@ -3,7 +3,7 @@ package dev.lutergs.santa.trade.worker.domain
 import dev.lutergs.santa.trade.worker.domain.entity.AlarmMessage
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
 import dev.lutergs.santa.trade.worker.infra.KafkaMessageResponse
-import dev.lutergs.upbeatclient.api.exchange.order.OrderResponse
+import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import reactor.core.publisher.Mono
 import java.util.UUID
 

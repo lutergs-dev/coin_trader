@@ -1,7 +1,7 @@
 package dev.lutergs.santa.trade.infra
 
 import dev.lutergs.santa.trade.domain.KubernetesInfo
-import dev.lutergs.upbeatclient.webclient.BasicClient
+import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

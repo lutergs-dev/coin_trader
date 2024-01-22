@@ -1,11 +1,11 @@
 package dev.lutergs.santa.trade.worker.domain
 
-import dev.lutergs.upbeatclient.api.exchange.order.OrderRequest
-import dev.lutergs.upbeatclient.api.exchange.order.OrderResponse
-import dev.lutergs.upbeatclient.api.exchange.order.PlaceOrderRequest
-import dev.lutergs.upbeatclient.dto.OrderSide
-import dev.lutergs.upbeatclient.webclient.BasicClient
-import dev.lutergs.upbeatclient.webclient.Client
+import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
+import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
+import dev.lutergs.upbitclient.api.exchange.order.PlaceOrderRequest
+import dev.lutergs.upbitclient.dto.OrderSide
+import dev.lutergs.upbitclient.webclient.BasicClient
+import dev.lutergs.upbitclient.webclient.Client
 import reactor.core.publisher.Mono
 import java.time.Duration
 
@@ -44,7 +44,7 @@ class UpbitClient(
             OrderSide.ASK -> this.repository.newSellOrder(it.toOrderResponse(), buyOrder!!.uuid)
         } }
         .flatMap { orderResponse ->
-          this.order.getOrder(OrderRequest(orderResponse.uuid))
+          Mono.defer { this.order.getOrder(OrderRequest(orderResponse.uuid)) }
             .flatMap {
               if (it.isFinished()) Mono.just(it)
               else Mono.empty()

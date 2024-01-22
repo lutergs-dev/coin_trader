@@ -1,7 +1,7 @@
 package dev.lutergs.santa.trade.worker.domain.entity
 
-import dev.lutergs.upbeatclient.api.exchange.order.OrderResponse
-import dev.lutergs.upbeatclient.dto.MarketCode
+import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
+import dev.lutergs.upbitclient.dto.MarketCode
 import java.util.UUID
 
 
