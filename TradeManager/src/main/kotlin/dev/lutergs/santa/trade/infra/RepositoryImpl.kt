@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono
 @Document("danger_coins")
 class DangerCoinEntity {
   @Id var id: String? = null
-  @Field @Indexed(name = "expiration_index", expireAfter = "3h")
+  @Field @Indexed(name = "expiration_index", expireAfter = "24h")
   var expireIn: String = ""
 
   var coinName: String = ""
