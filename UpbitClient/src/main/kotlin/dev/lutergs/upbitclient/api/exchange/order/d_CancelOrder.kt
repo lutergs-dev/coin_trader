@@ -3,7 +3,6 @@ package dev.lutergs.upbitclient.api.exchange.order
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import dev.lutergs.upbeatclient.dto.*
 import dev.lutergs.upbitclient.dto.*
 import java.time.OffsetDateTime
 import java.util.UUID

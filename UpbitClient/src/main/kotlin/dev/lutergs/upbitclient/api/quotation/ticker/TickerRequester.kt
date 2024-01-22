@@ -3,7 +3,6 @@ package dev.lutergs.upbitclient.api.quotation.ticker
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import dev.lutergs.upbitclient.api.RequestDao
-import dev.lutergs.upbeatclient.dto.*
 import dev.lutergs.upbitclient.webclient.Requester
 import dev.lutergs.upbitclient.dto.*
 import reactor.core.publisher.Flux
