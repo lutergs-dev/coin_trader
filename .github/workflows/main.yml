@@ -83,21 +83,21 @@ jobs:
           build-args: |
             PROJECT_NAME=TradeWorker
 
-#      - name: install kubectl
-#        id: install-kubectl
-#        uses: azure/setup-kubectl@v3
-#        with:
-#          version: ${{ vars.K8S_VERSION }} # default is latest stable
-#
-#      - name: set k8s context
-#        id: set-k8s-context
-#        uses: azure/k8s-set-context@v1
-#        with:
-#          method: kubeconfig
-#          kubeconfig: ${{ secrets.K8S_CONFIG }} # Use secret (https://developer.github.com/actions/managing-workflows/storing-secrets/)
-#          context: #If left unspecified, current-context from kubeconfig is used as default
-#
-#      - name: refresh deployment
-#        id: refresh-k8s-deployment
-#        run: |
-#          kubectl rollout restart deployment ${{ vars.K8S_DEPLOYMENT_NAME }} -n ${{ vars.K8S_NAMESPACE }}
+      - name: install kubectl
+        id: install-kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ vars.K8S_VERSION }} # default is latest stable
+
+      - name: set k8s context
+        id: set-k8s-context
+        uses: azure/k8s-set-context@v1
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.K8S_CONFIG }} # Use secret (https://developer.github.com/actions/managing-workflows/storing-secrets/)
+          context: #If left unspecified, current-context from kubeconfig is used as default
+
+      - name: refresh deployment
+        id: refresh-k8s-deployment
+        run: |
+          kubectl rollout restart deployment ${{ vars.K8S_DEPLOYMENT_NAME }} -n ${{ vars.K8S_NAMESPACE }}
