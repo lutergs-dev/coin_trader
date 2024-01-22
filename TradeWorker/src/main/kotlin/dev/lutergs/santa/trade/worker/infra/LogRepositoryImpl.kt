@@ -96,7 +96,7 @@ class LogRepositoryImpl(
         } else {
           response.reservedFee
         }
-        it.sellWon = response.price * response.volume + it.sellFee!!
+        it.sellWon = response.price * response.volume - it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.repository.save(it)
       }.thenReturn(response)
