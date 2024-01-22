@@ -14,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Duration
 import kotlin.math.roundToInt
 
 class TestBasicClient {
@@ -54,9 +55,20 @@ class TestBasicClient {
       .flatMap { mcr -> Mono.fromCallable { Markets(mcr.map { it.market }) } }
       .flatMapMany { this.basicClient.ticker.getTicker(it) }
       .sort { o1, o2 ->
-        (o1.accTradePrice24h - o2.accTradePrice24h).roundToInt()
+        (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt()
       }
+      .take(25, true)
+      .delayElements(Duration.ofMillis(200))
       .flatMap {
+        Mono.zip(
+          this.basicClient.orderBook.getOrderBook(Markets.fromMarket(it.market)).next(),
+          this.basicClient.candle.getMinute(CandleMinuteRequest(it.market, 3, 60)).next()
+        ).flatMap { t ->
+          println(t.t1)
+          println(t.t2)
+          Mono.just(t)
+        }
+      }.flatMap {
         println(it.toString())
         Mono.just(it)
       }.blockLast()

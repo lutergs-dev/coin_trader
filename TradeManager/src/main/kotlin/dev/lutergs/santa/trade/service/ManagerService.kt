@@ -14,6 +14,7 @@ import io.kubernetes.client.openapi.apis.CoreV1Api
 import io.kubernetes.client.openapi.models.*
 import io.kubernetes.client.util.Config
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Component
@@ -22,6 +23,7 @@ import reactor.core.publisher.Mono
 import reactor.util.function.Tuple2
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.logging.Level
 import kotlin.math.roundToInt
 
 @Component
@@ -33,6 +35,15 @@ class ManagerService(
   @Value("\${custom.trade.worker.min-money}") private val minMoney: Int
 ) {
   private val api = CoreV1Api()
+
+  init {
+    val logger = LoggerFactory.getLogger("test")
+    this.findApplicableCoin()
+      .log("test", Level.ALL)
+      .subscribe {
+        logger.info("data = {}", it)
+      }
+  }
 
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {
@@ -106,11 +117,11 @@ class ManagerService(
       .collectList()
       .flatMap { Mono.just(Markets(it)) }
       .flatMapMany { this.upbitBasicClient.ticker.getTicker(it) }
-      .sort { o1, o2 -> (o1.accTradePrice24h - o2.accTradePrice24h).roundToInt() }
-      .take(25)
+      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt() }
+      .take(25, true)
+      .delayElements(Duration.ofMillis(200))
       .flatMap {
         this.getPriorityAndTradeable(it)
-          .delayElement(Duration.ofMillis(100))
           .flatMap { priorityAndTradable ->
             if (priorityAndTradable.t2) Mono.just(Pair(it, priorityAndTradable.t1))
             else Mono.empty()
