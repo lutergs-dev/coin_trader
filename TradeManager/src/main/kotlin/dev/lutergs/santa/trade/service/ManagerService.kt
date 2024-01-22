@@ -9,6 +9,7 @@ import dev.lutergs.upbitclient.api.quotation.ticker.TickerResponse
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
+import io.kubernetes.client.openapi.ApiException
 import io.kubernetes.client.openapi.apis.BatchV1Api
 import io.kubernetes.client.openapi.models.*
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -33,6 +34,18 @@ class ManagerService(
 ) {
   private val api = BatchV1Api()
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
+
+//  init {
+//    this.initWorker()
+//      .onErrorComplete {
+//        if (it is ApiException) {
+//          println(it.responseBody)
+//          println(it.responseHeaders)
+//          println(it.localizedMessage)
+//        }
+//        it is ApiException
+//      }.blockLast()
+//  }
 
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {
@@ -88,6 +101,7 @@ class ManagerService(
                   .labels(mapOf(Pair("sidecar.istio.io/inject", "false")))
               ).spec(
                 V1PodSpec()
+                  .restartPolicy("Never")
                   .imagePullSecrets(listOf(V1LocalObjectReference()
                     .name(this.kubernetesInfo.imagePullSecretName)
                   ))
