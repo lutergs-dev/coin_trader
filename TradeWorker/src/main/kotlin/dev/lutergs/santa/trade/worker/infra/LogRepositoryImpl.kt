@@ -90,9 +90,13 @@ class LogRepositoryImpl(
       .flatMap {
         it.sellId = response.uuid.toString()
         it.sellPrice = response.price
-        it.sellFee = response.reservedFee
         it.sellVolume = response.volume
-        it.sellWon = response.price * response.volume + response.reservedFee
+        it.sellFee = if (response.state == "done") {
+          response.paidFee
+        } else {
+          response.reservedFee
+        }
+        it.sellWon = response.price * response.volume + it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.repository.save(it)
       }.thenReturn(response)
