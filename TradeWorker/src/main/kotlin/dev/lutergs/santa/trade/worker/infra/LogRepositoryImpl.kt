@@ -71,7 +71,7 @@ class LogRepositoryImpl(
         this.buyPrice = response.price
         this.buyFee = response.reservedFee
         this.buyVolume = response.volume
-        this.buyWon = response.price * response.volume + response.reservedFee
+        this.buyWon = response.price * response.volume - response.reservedFee
         this.buyPlaceAt = response.createdAt
         this.setNewInstance()
       }.let { this.repository.save(it).thenReturn(response) }
