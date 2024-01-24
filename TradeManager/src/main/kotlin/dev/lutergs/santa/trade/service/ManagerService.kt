@@ -176,13 +176,14 @@ class ManagerService(
     /**
      * BID ASK (bid 가 사는거, ask 가 파는거)
      * 호가를 기준으로, 1호가부터 가중치를 둬서 비교 판단
+     * 가중치는 n호가 (총구매가격 - 총판매가격) 의 ( (15-n) / 15 ) 를 반영함. 즉, 1호가에 가까운 가격일수록 크게 반영
      * */
     return this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
       .next()
       .flatMap { orderbook ->
         val length = orderbook.orderbookUnits.size
         orderbook.orderbookUnits
-          .mapIndexed { idx, data -> (data.bidSize - data.askSize) * ((length - idx) / length) }
+          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((length - idx) / length) }
           .sum()
           .let { Mono.just(it) }
       }
