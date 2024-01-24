@@ -74,7 +74,7 @@ class ManagerService(
                     .also { this.logger.info("${market.quote} 를 ${this.maxMoney} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
                   totalMoney.addAndGet(-this.maxMoney)
                 } else if (totalMoney.get() < this.maxMoney && totalMoney.get() >= this.minMoney) {
-                  this.initK8sWorker(market, this.maxMoney)
+                  this.initK8sWorker(market, totalMoney.get())
                     .also { this.logger.info("${market.quote} 를 ${totalMoney.get()} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
                   totalMoney.set(0)
                 }
