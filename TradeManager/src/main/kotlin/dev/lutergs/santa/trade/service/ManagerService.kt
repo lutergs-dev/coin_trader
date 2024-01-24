@@ -90,6 +90,7 @@ class ManagerService(
       .spec(
         V1JobSpec()
           .backoffLimit(3)
+          .ttlSecondsAfterFinished(3600)
           .template(
             V1PodTemplateSpec()
               .metadata(
