@@ -197,12 +197,14 @@ class ManagerService(
     return this.upbitClient.candle.getMinute(CandleMinuteRequest(ticker.market, 60, 10))
       .collectList()
       .flatMap { candles ->
+        var result = true
+
         // rule 1
         if (candles.maxOf { it.highPrice } >= ticker.tradePrice &&
           candles.minOf { it.lowPrice } >= ticker.tradePrice * 0.8
         ) {
-          return@flatMap Mono.just(false)
-            .doOnNext { this.logger.info("코인 ${ticker.market.quote} 은 6시간동안의 고가가 현재가 기준 2배 이상, 저가가 현재가 기준 80% 이상이어서 거래하지 않습니다.") }
+          result = false
+          this.logger.info("코인 ${ticker.market.quote} 은 6시간동안의 고가가 현재가 기준 2배 이상, 저가가 현재가 기준 80% 이상이어서 거래하지 않습니다.")
         }
 
         // rule 2
@@ -211,11 +213,11 @@ class ManagerService(
           .map { it.tradePrice }
           .let { this.calculateRSI(it, 20) }
         if (rsi >= 70.0) {
-          return@flatMap Mono.just(false)
-            .doOnNext { this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (70 이상) 이어서 거래하지 않습니다.") }
+          result = false
+          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (70 이상) 이어서 거래하지 않습니다.")
         }
 
-        Mono.just(true)
+        Mono.just(result)
       }
   }
 
