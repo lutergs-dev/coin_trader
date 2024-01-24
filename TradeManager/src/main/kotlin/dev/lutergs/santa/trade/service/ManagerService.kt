@@ -200,7 +200,7 @@ class ManagerService(
         var result = true
 
         // rule 1
-        if (candles.maxOf { it.highPrice } >= ticker.tradePrice &&
+        if (candles.maxOf { it.highPrice } >= ticker.tradePrice * 2 &&
           candles.minOf { it.lowPrice } >= ticker.tradePrice * 0.8
         ) {
           result = false
