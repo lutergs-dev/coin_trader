@@ -36,17 +36,17 @@ class MessageSenderKafkaProxyImpl(
   private val logger = LoggerCreate.createLogger(this::class)
 
   override fun sendAlarm(msg: AlarmMessage): Mono<KafkaMessageResponse> {
-    return this.sendPost(URI.create("/${this.alarmTopicName}/records"), KafkaMessage(msg.key, msg.value))
+    return this.sendPost("/${this.alarmTopicName}/records", KafkaMessage(msg.key, msg.value))
   }
 
   override fun sendTradeResult(msg: TradeResult): Mono<KafkaMessageResponse> {
-    return this.sendPost(URI.create("/${this.tradeResultTopicName}/records"), KafkaMessage(msg.key, msg.value))
+    return this.sendPost("/${this.tradeResultTopicName}/records", KafkaMessage(msg.key, msg.value))
   }
 
-  private fun sendPost(uri: URI, body: KafkaMessage): Mono<KafkaMessageResponse> {
+  private fun sendPost(path: String, body: KafkaMessage): Mono<KafkaMessageResponse> {
     return this.webClient
       .post()
-      .uri(uri)
+      .uri { it.path(path).build() }
       .bodyValue(body.toJsonString(this.objectMapper))
       .retrieve()
       .bodyToMono(KafkaMessageResponse::class.java)
