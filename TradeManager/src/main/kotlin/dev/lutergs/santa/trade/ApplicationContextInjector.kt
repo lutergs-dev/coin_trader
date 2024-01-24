@@ -24,6 +24,7 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
     val envName = environment.getProperty("spring.profiles.active")
 
     // set current timezone to Seoul
+    environment.getProperty("user.timezone")
     TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"))
 
     // set kubernetes default client

@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.0.9"
+version = "0.0.10"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -25,6 +25,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.1")
     implementation("org.springframework.kafka:spring-kafka:3.0.10")
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.0.4")
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.0.4")
+
+    implementation("com.oracle.database.r2dbc:oracle-r2dbc:1.2.0")
+    implementation("io.r2dbc:r2dbc-pool:1.0.1.RELEASE")
+    implementation("io.r2dbc:r2dbc-spi:1.0.0.RELEASE")
+    implementation("com.oracle.database.jdbc:ojdbc11:21.11.0.0")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
 

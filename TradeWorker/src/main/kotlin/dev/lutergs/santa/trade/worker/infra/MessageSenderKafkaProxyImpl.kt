@@ -5,8 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.AlarmMessage
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
+import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
+import reactor.util.retry.Retry
+import java.net.URI
+import java.time.Duration
 import java.util.*
 
 class MessageSenderKafkaProxyImpl(
@@ -18,7 +24,6 @@ class MessageSenderKafkaProxyImpl(
   private val tradeResultTopicName: String,
   private val objectMapper: ObjectMapper
 ): MessageSender {
-
   private val webClient = WebClient.builder()
     .baseUrl("$kafkaProxyUrl/kafka/v3/clusters/$kafkaClusterName/topics")
     .defaultHeader("Content-Type", "application/json")
@@ -28,23 +33,31 @@ class MessageSenderKafkaProxyImpl(
         .encodeToString("$kafkaApiKey:$kafkaApiSecret".toByteArray(Charsets.UTF_8))
         .let { "Basic $it" }
     ).build()
+  private val logger = LoggerCreate.createLogger(this::class)
 
   override fun sendAlarm(msg: AlarmMessage): Mono<KafkaMessageResponse> {
-    return this.webClient
-      .post()
-      .uri { it.path("/${this.alarmTopicName}/records").build() }
-      .bodyValue(KafkaMessage(msg.key, msg.value).toJsonString(this.objectMapper))
-      .retrieve()
-      .bodyToMono(KafkaMessageResponse::class.java)
+    return this.sendPost(URI.create("/${this.alarmTopicName}/records"), KafkaMessage(msg.key, msg.value))
   }
 
   override fun sendTradeResult(msg: TradeResult): Mono<KafkaMessageResponse> {
+    return this.sendPost(URI.create("/${this.tradeResultTopicName}/records"), KafkaMessage(msg.key, msg.value))
+  }
+
+  private fun sendPost(uri: URI, body: KafkaMessage): Mono<KafkaMessageResponse> {
     return this.webClient
       .post()
-      .uri { it.path("/${this.tradeResultTopicName}/records").build() }
-      .bodyValue(KafkaMessage(msg.key, msg.value).toJsonString(this.objectMapper))
+      .uri(uri)
+      .bodyValue(body.toJsonString(this.objectMapper))
       .retrieve()
       .bodyToMono(KafkaMessageResponse::class.java)
+      .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
+      .doOnError {
+        if (it is WebClientResponseException) {
+          this.logger.error("Response Exception occured. response code : ${it.statusCode}, response body: ${it.responseBodyAsString}")
+        } else {
+          this.logger.error("error occured", it)
+        }
+      }
   }
 }
 

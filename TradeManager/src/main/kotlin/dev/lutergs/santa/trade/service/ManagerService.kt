@@ -9,7 +9,6 @@ import dev.lutergs.upbitclient.api.quotation.ticker.TickerResponse
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
-import io.kubernetes.client.openapi.ApiException
 import io.kubernetes.client.openapi.apis.BatchV1Api
 import io.kubernetes.client.openapi.models.*
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -24,13 +23,12 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
-@Component
 class ManagerService(
-  private val upbitBasicClient: BasicClient,
+  private val upbitClient: BasicClient,
   private val repository: DangerCoinRepository,
   private val kubernetesInfo: KubernetesInfo,
-  @Value("\${custom.trade.worker.max-money}") private val maxMoney: Int,
-  @Value("\${custom.trade.worker.min-money}") private val minMoney: Int
+  private val maxMoney: Int,
+  private val minMoney: Int
 ) {
   private val api = BatchV1Api()
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
@@ -54,7 +52,7 @@ class ManagerService(
   }
 
   private fun initWorker(): Flux<Boolean> {
-    return this.upbitBasicClient.account.getAccount()
+    return this.upbitClient.account.getAccount()
       .filter { it.currency == "KRW" }
       .next()
       .flatMap { Mono.just(it.balance.roundToInt() - 1000) }
@@ -128,12 +126,12 @@ class ManagerService(
 
 
   private fun findApplicableCoin(): Mono<TickerResponse> {
-    return this.upbitBasicClient.market.getMarketCode()
+    return this.upbitClient.market.getMarketCode()
       .filter { it.market.base == "KRW" && it.marketWarning != MarketWarning.CAUTION }
       .flatMap { Mono.just(it.market) }
       .collectList()
       .flatMap { Mono.just(Markets(it)) }
-      .flatMapMany { this.upbitBasicClient.ticker.getTicker(it) }
+      .flatMapMany { this.upbitClient.ticker.getTicker(it) }
       .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt() }
       .take(25, true)
       .delayElements(Duration.ofMillis(200))
@@ -143,7 +141,7 @@ class ManagerService(
             if (priorityAndTradable.t2) Mono.just(Pair(it, priorityAndTradable.t1))
             else Mono.empty()
           }
-      }.sort { o1, o2 -> (o1.second - o2.second).roundToInt() }
+      }.sort { o1, o2 -> (o2.second - o1.second).roundToInt() }
       .take(15)
       .collectList()
       .flatMap { coinList ->
@@ -163,7 +161,7 @@ class ManagerService(
      * BID ASK (bid 가 사는거, ask 가 파는거)
      * 호가를 기준으로, 1호가부터 가중치를 둬서 비교 판단
      * */
-    val priority = this.upbitBasicClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
+    val priority = this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
       .next()
       .flatMap { orderbook ->
         val length = orderbook.orderbookUnits.size
@@ -177,7 +175,7 @@ class ManagerService(
      * 최근부터 3시간 동안의 데이터를 확인해, 다음과 같은 기준을 따름.
      * 1. 고가가 현재가 기준 2배 이상, 저가가 현재가 기준 80% 이상일 때는 거래하지 않음
      * */
-    val isTradable = this.upbitBasicClient.candle.getMinute(CandleMinuteRequest(ticker.market, 3, 60))
+    val isTradable = this.upbitClient.candle.getMinute(CandleMinuteRequest(ticker.market, 3, 60))
       .reduce(Pair(0.0, 0.0)) { acc, candle ->
         Pair(
           if (acc.first < candle.highPrice) candle.highPrice else acc.first,

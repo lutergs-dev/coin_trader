@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.0.6"
+version = "0.0.7"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -36,8 +36,6 @@ dependencies {
   implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
-
-  implementation("io.kubernetes:client-java:15.0.1")
 
   testImplementation("org.springframework.boot:spring-boot-starter-test:3.1.0")
   testImplementation("io.projectreactor:reactor-test:3.5.4")

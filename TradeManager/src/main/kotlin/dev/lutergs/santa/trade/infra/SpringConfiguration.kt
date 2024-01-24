@@ -1,6 +1,13 @@
 package dev.lutergs.santa.trade.infra
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import dev.lutergs.santa.trade.domain.AlertMessageSender
+import dev.lutergs.santa.trade.domain.DangerCoinRepository
 import dev.lutergs.santa.trade.domain.KubernetesInfo
+import dev.lutergs.santa.trade.domain.TradeHistoryRepository
+import dev.lutergs.santa.trade.infra.impl.AlertMessageSenderImpl
+import dev.lutergs.santa.trade.service.AlertService
+import dev.lutergs.santa.trade.service.ManagerService
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -25,4 +32,38 @@ class SpringConfiguration {
   ): KubernetesInfo {
     return KubernetesInfo(namespace, imagePullSecretName, imagePullPolicy, imageName, envSecretName)
   }
+  
+  @Bean
+  fun managerService(
+    client: BasicClient,
+    dangerCoinRepository: DangerCoinRepository,
+    kubernetesInfo: KubernetesInfo,
+    @Value("\${custom.trade.worker.max-money}") maxMoney: Int,
+    @Value("\${custom.trade.worker.min-money}") minMoney: Int
+  ): ManagerService = ManagerService(
+    client, dangerCoinRepository, kubernetesInfo, maxMoney, minMoney
+  )
+  
+  @Bean
+  fun alertService(
+    dangerCoinRepository: DangerCoinRepository,
+    tradeHistoryRepository: TradeHistoryRepository,
+    messageSender: AlertMessageSender,
+    objectMapper: ObjectMapper,
+    @Value("\${custom.alert.topic}") topicName: String
+  ): AlertService = AlertService(
+    dangerCoinRepository,
+    tradeHistoryRepository,
+    messageSender, 
+    objectMapper, 
+    topicName
+  )
+
+  @Bean
+  fun alertMessageSender(
+    @Value("\${custom.message-sender.url}") baseUrl: String,
+    @Value("\${custom.message-sender.username}") username: String,
+    @Value("\${custom.message-sender.password}") password: String,
+    objectMapper: ObjectMapper
+  ): AlertMessageSenderImpl = AlertMessageSenderImpl(baseUrl, username, password, objectMapper)
 }

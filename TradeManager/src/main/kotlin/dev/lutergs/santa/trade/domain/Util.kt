@@ -14,3 +14,7 @@ object Util {
   }
 }
 
+fun Double.toStrWithPoint(point: Int = 2): String {
+  return String.format("%.${point}f", this)
+}
+
