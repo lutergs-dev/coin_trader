@@ -33,5 +33,6 @@ custom:
     min-conn: ${ORACLE_MIN_CONN:1}
   message-sender:
     url: ${MESSAGE_SENDER_URL:'url'}
+    topic: ${MESSAGE_SENDER_TOPIC:'topic'}
     username: ${MESSAGE_SENDER_USERNAME:'username'}
     password: ${MESSAGE_SENDER_PASSWORD:'password'}

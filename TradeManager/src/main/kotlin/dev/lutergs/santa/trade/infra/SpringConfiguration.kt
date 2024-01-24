@@ -50,7 +50,7 @@ class SpringConfiguration {
     tradeHistoryRepository: TradeHistoryRepository,
     messageSender: AlertMessageSender,
     objectMapper: ObjectMapper,
-    @Value("\${custom.alert.topic}") topicName: String
+    @Value("\${custom.message-sender.topic}") topicName: String
   ): AlertService = AlertService(
     dangerCoinRepository,
     tradeHistoryRepository,
