@@ -55,12 +55,12 @@ data class Message (
                 }
                 "[${it.buyPlaceAt!!.toLocalDateTime().format(this.dateTimeFormatter)}]" +
                   " ${it.coin!!} ${it.buyPrice!!.toStrWithPoint()} 에 매수," +
-                  " ${it.sellPrice!!.toStrWithPoint()} 에 $sellTypeStr 매도. ${it.profit!!} 원 $isProfit"
+                  " ${it.sellPrice!!.toStrWithPoint()} 에 $sellTypeStr 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
               }.let { body ->
                 Message(
                   topic = topic,
-                  title = "최근 24시간 동안 ${String.format("%.2f", orderEntities.sumOf { it.profit ?: 0.0 })} 원을 벌었습니다.",
-                  body = "코인 매수/매도기록은 다음과 같습니다.\n$body"
+                  title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
+                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body"
                 )
               }
           }
