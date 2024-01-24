@@ -31,8 +31,12 @@ class AlertService(
   }
 
   @Scheduled(cron = "0 0 20 * * *")
-  fun sendTodayEarning() {
-    LocalDateTime.of(
+  fun batchTodayEarning() {
+    this.sendTodayEarning().block()
+  }
+
+  fun sendTodayEarning(): Mono<String> {
+    return LocalDateTime.of(
       LocalDate.now(ZoneId.of("Asia/Seoul")),
       LocalTime.of(20, 0, 0)
     ).let {
@@ -42,7 +46,6 @@ class AlertService(
       )
     }.let { Message.createProfitMessage(it, this.topicName) }
       .flatMap { this.messageSender.sendMessage(it) }
-      .block()
   }
 
   fun sendAllCoinsAreDangerous(): Mono<String> {

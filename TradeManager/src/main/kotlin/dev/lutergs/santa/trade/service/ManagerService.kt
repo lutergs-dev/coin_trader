@@ -58,35 +58,41 @@ class ManagerService(
       .flatMapMany { totalRawMoney ->
         val workerCount = (totalRawMoney / this.maxMoney)
           .let { if (totalRawMoney % this.maxMoney >= this.minMoney) it + 1 else it }
-        val totalMoney = AtomicInteger(totalRawMoney)
-        this.findApplicableCoin(workerCount)
-          .flatMapMany { tickers ->
-            if (tickers.size < workerCount) {
-              this.logger.info("${workerCount}개의 Worker 가 가능함에도, " +
-                "시장 상태에 따라 ${tickers.size}개의 Worker 만, " +
-                "${tickers.joinToString(separator = ",") { it.market.quote }} 코인을 구매합니다.")
-            }
-            tickers
-              .map { it.market }
-              .map { market ->
-                if (totalMoney.get() >= this.maxMoney) {
-                  this.initK8sWorker(market, this.maxMoney)
-                    .also { this.logger.info("${market.quote} 를 ${this.maxMoney} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
-                  totalMoney.addAndGet(-this.maxMoney)
-                } else if (totalMoney.get() < this.maxMoney && totalMoney.get() >= this.minMoney) {
-                  this.initK8sWorker(market, totalMoney.get())
-                    .also { this.logger.info("${market.quote} 를 ${totalMoney.get()} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
-                  totalMoney.set(0)
-                }
-                Mono.just(true)
-              }.let { Flux.concat(it) }
-          }.switchIfEmpty(
-            this.alertService.sendAllCoinsAreDangerous()
-              .flatMap {
-                this.logger.warn("모든 코인이 위험한 상태입니다! 조치가 필요합니다.")
-                Mono.just(false)
+        if (workerCount == 0) {
+          this.logger.info("코인이 팔렸지만, 현재 가진 금액 (${totalRawMoney}) 이 최소거래값 (${this.minMoney}) 보다 적어 거래하지 않습니다.")
+          Flux.just(false)
+        } else {
+          val totalMoney = AtomicInteger(totalRawMoney)
+          this.findApplicableCoin(workerCount)
+            .flatMapMany { tickers ->
+              if (tickers.size < workerCount) {
+                this.logger.info("${workerCount}개의 Worker 가 가능함에도, " +
+                  "시장 상태에 따라 ${tickers.size}개의 Worker 만, " +
+                  "${tickers.joinToString(separator = ",") { it.market.quote }} 코인을 구매합니다.")
               }
-          )
+              tickers
+                .map { it.market }
+                .map { market ->
+                  if (totalMoney.get() >= this.maxMoney) {
+                    this.initK8sWorker(market, this.maxMoney)
+                      .also { this.logger.info("${market.quote} 를 ${this.maxMoney} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
+                    totalMoney.addAndGet(-this.maxMoney)
+                  } else if (totalMoney.get() < this.maxMoney && totalMoney.get() >= this.minMoney) {
+                    this.initK8sWorker(market, totalMoney.get())
+                      .also { this.logger.info("${market.quote} 를 ${totalMoney.get()} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
+                    totalMoney.set(0)
+                  }
+                  Mono.just(true)
+                }.let { Flux.concat(it) }
+            }.switchIfEmpty(
+              this.alertService.sendAllCoinsAreDangerous()
+                .flatMap {
+                  this.logger.warn("모든 코인이 위험한 상태입니다! 조치가 필요합니다.")
+                  Mono.just(false)
+                }
+            )
+        }
+
       }
   }
 
