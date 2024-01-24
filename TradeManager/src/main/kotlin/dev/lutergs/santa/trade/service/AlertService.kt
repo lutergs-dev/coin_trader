@@ -44,4 +44,10 @@ class AlertService(
       .flatMap { this.messageSender.sendMessage(it) }
       .block()
   }
+
+  fun sendAllCoinsAreDangerous(): Mono<String> {
+    return this.messageSender.sendMessage(
+      Message(this.topicName, "모든 코인이 위험합니다.", "모든 코인이 위험합니다. 업비트를 확인 후 조치를 취해주세요.")
+    )
+  }
 }

@@ -35,13 +35,14 @@ class SpringConfiguration {
   
   @Bean
   fun managerService(
+    alertService: AlertService,
     client: BasicClient,
     dangerCoinRepository: DangerCoinRepository,
     kubernetesInfo: KubernetesInfo,
     @Value("\${custom.trade.worker.max-money}") maxMoney: Int,
     @Value("\${custom.trade.worker.min-money}") minMoney: Int
   ): ManagerService = ManagerService(
-    client, dangerCoinRepository, kubernetesInfo, maxMoney, minMoney
+    alertService, client, dangerCoinRepository, kubernetesInfo, maxMoney, minMoney
   )
   
   @Bean
