@@ -13,13 +13,14 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.time.Duration
+import java.time.LocalDateTime
 
 
 @Document("danger_coins")
 class DangerCoinEntity {
   @Id var id: String? = null
   @Field @Indexed(name = "expiration_index", expireAfter = "24h")
-  var expireIn: String = ""
+  var expireIn: LocalDateTime = LocalDateTime.now()
 
   var coinName: String = ""
 }

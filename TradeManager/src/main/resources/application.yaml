@@ -7,6 +7,9 @@ spring:
     properties:
       sasl.mechanism: PLAIN
       security.protocol: SASL_SSL
+  data:
+    mongodb:
+      auto-index-creation: true
 
 custom:
   trade:
