@@ -18,15 +18,15 @@ class TickerRequester(requester: Requester) : RequestDao(requester) {
 
 data class TickerResponse(
   @JsonDeserialize(using = MarketCodeDeserializer::class)
-    @JsonProperty("market")                 val market: MarketCode,
+  @JsonProperty("market")                 val market: MarketCode,
   @JsonDeserialize(using = DateDeserializer::class)
-    @JsonProperty("trade_date")             val tradeDate: LocalDate,
+  @JsonProperty("trade_date")             val tradeDate: LocalDate,
   @JsonDeserialize(using = TimeDeserializer::class)
-    @JsonProperty("trade_time")             val tradeTime: LocalTime,
+  @JsonProperty("trade_time")             val tradeTime: LocalTime,
   @JsonDeserialize(using = DateDeserializer::class)
-    @JsonProperty("trade_date_kst")         val tradeDateKst: LocalDate,
+  @JsonProperty("trade_date_kst")         val tradeDateKst: LocalDate,
   @JsonDeserialize(using = TimeDeserializer::class)
-    @JsonProperty("trade_time_kst")         val tradeTimeKst: LocalTime,
+  @JsonProperty("trade_time_kst")         val tradeTimeKst: LocalTime,
   @JsonProperty("trade_timestamp")        val tradeTimestamp: Long,
   @JsonProperty("opening_price")          val openingPrice: Double,
   @JsonProperty("high_price")             val highPrice: Double,
@@ -45,10 +45,10 @@ data class TickerResponse(
   @JsonProperty("acc_trade_volume_24h")   val accTradeVolume24h: Double,
   @JsonProperty("highest_52_week_price")  val highest52weekPrice: Double,
   @JsonDeserialize(using = DateWithHyphenDeserializer::class)
-    @JsonProperty("highest_52_week_date")   val highest52weekDate: LocalDate,
+  @JsonProperty("highest_52_week_date")   val highest52weekDate: LocalDate,
   @JsonProperty("lowest_52_week_price")   val lowest52weekPrice: Double,
   @JsonDeserialize(using = DateWithHyphenDeserializer::class)
-    @JsonProperty("lowest_52_week_date")    val lowest52weekDate: LocalDate,
+  @JsonProperty("lowest_52_week_date")    val lowest52weekDate: LocalDate,
   @JsonProperty("timestamp")              val timestamp: Long
 )
 

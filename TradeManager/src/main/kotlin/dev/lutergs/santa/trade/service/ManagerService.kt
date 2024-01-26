@@ -157,7 +157,7 @@ class ManagerService(
       .flatMapMany { this.upbitClient.ticker.getTicker(it) }
       .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt() }
       .take(25, true)
-      .delayElements(Duration.ofMillis(200))
+      .delayElements(Duration.ofMillis(200))    // 업비트 API Timeout 고려
       .filterWhen { this.isTradeable(it) }
       .flatMap { ticker -> this.getPriority(ticker)
         .flatMap { p -> Mono.fromCallable { Pair(ticker, p) } }
@@ -195,16 +195,19 @@ class ManagerService(
      * BID ASK (bid 가 사는거, ask 가 파는거)
      * 호가를 기준으로, 1호가부터 가중치를 둬서 비교 판단
      * 가중치는 n호가 (총구매가격 - 총판매가격) 의 ( (15-n) / 15 ) 를 반영함. 즉, 1호가에 가까운 가격일수록 크게 반영
+     *
+     * (2023.01.26) 근데 이건 너무 고정된 결과를 낳을 수도 있다. 일단 이걸 방지하고자 거래량 자체를 판단하는 것으로 수정
      * */
-    return this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
-      .next()
-      .flatMap { orderbook ->
-        val length = orderbook.orderbookUnits.size
-        orderbook.orderbookUnits
-          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((length - idx) / length) }
-          .sum()
-          .let { Mono.just(it) }
-      }
+    return Mono.just(ticker.accTradePrice24h)
+//    return this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
+//      .next()
+//      .flatMap { orderbook ->
+//        val length = orderbook.orderbookUnits.size
+//        orderbook.orderbookUnits
+//          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((length - idx) / length) }
+//          .sum()
+//          .let { Mono.just(it) }
+//      }
   }
 
   /**
