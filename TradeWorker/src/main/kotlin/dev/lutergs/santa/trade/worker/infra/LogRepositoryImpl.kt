@@ -114,11 +114,7 @@ class LogRepositoryImpl(
         it.sellId = response.uuid.toString()
         it.sellPrice = response.price
         it.sellVolume = response.volume
-        it.sellFee = if (response.state == "done") {
-          listOf(response.paidFee, response.reservedFee, response.remainingFee).max()
-        } else {
-          response.reservedFee
-        }
+        it.sellFee = listOf(response.paidFee, response.reservedFee, response.remainingFee).maxOrNull()!!
         it.sellWon = response.price * response.volume - it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.retrySave(it)
@@ -133,6 +129,7 @@ class LogRepositoryImpl(
           it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
           it.profit = (sellResponse.price * sellResponse.volume) - (buyResponse.price * buyResponse.volume) - (buyResponse.paidFee + sellResponse.paidFee)
           it.sellType = sellType.name
+          it.sellFee = listOf(sellResponse.paidFee, sellResponse.reservedFee, sellResponse.remainingFee).maxOrNull()!!
           this.retrySave(it).thenReturn(sellResponse)
         }
       }
