@@ -18,3 +18,13 @@ fun Double.toStrWithPoint(point: Int = 2): String {
   return String.format("%.${point}f", this)
 }
 
+/**
+ * lastIndex is exclusive
+ * */
+inline fun <reified T> List<T>.subListOrAll(lastIndex: Int): List<T> {
+  return if (this.size > lastIndex) {
+    this.subList(0, lastIndex)
+  } else {
+    this
+  }
+}

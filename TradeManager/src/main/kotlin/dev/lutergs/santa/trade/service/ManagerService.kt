@@ -1,9 +1,6 @@
 package dev.lutergs.santa.trade.service
 
-import dev.lutergs.santa.trade.domain.DangerCoinRepository
-import dev.lutergs.santa.trade.domain.KubernetesInfo
-import dev.lutergs.santa.trade.domain.Util
-import dev.lutergs.santa.trade.domain.toStrWithPoint
+import dev.lutergs.santa.trade.domain.*
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteRequest
 import dev.lutergs.upbitclient.api.quotation.market.MarketWarning
 import dev.lutergs.upbitclient.api.quotation.ticker.TickerResponse
@@ -146,6 +143,7 @@ class ManagerService(
 
 
   private fun findApplicableCoin(coinCount: Int): Mono<List<TickerResponse>> {
+    if (coinCount < 0) throw IllegalArgumentException("코인 개수는 0 이상의 값을 지정해야 합니다")
     return this.upbitClient.market.getMarketCode()
       .filter { it.market.base == "KRW" && it.marketWarning != MarketWarning.CAUTION }
       .flatMap { Mono.just(it.market) }
@@ -160,10 +158,9 @@ class ManagerService(
       .flatMap { ticker -> this.getPriority(ticker)
         .flatMap { p -> Mono.fromCallable { Pair(ticker, p) } }
       }.sort { o1, o2 -> (o2.second - o1.second).roundToInt() }
-      .take(15)
       .collectList()
       .flatMap { coinList ->
-        this.logger.info("거래 가능한 코인 중, 우선순위에 의거한 상위 15개 코인은 다음과 같습니다 : ${coinList.map { "${it.first.market.quote}(${it.second.toStrWithPoint()})" }}")
+        this.logger.info("거래 가능한 코인 중, 우선순위에 의거한 상위 ${coinList.size}개 코인은 다음과 같습니다 : ${coinList.map { "${it.first.market.quote}(${it.second.toStrWithPoint()})" }}")
         this.repository.getDangerCoins()
           .collectList()
           .flatMap { dangerCoinList ->
@@ -172,6 +169,17 @@ class ManagerService(
               .filterNot { dangerCoinList.contains(it.first.market.quote) }
               .let { Mono.just(it.map { p -> p.first }) }
           }
+      }.flatMap { coinList ->
+        (if (coinCount <= 2) {
+          this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 6개의 코인을 선택합니다. ")
+          coinList.subListOrAll(6)
+        } else if (coinCount <= 5) {
+          this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 ${coinCount * 3}개의 코인을 선택합니다.")
+          coinList.subListOrAll(coinCount * 3)
+        } else {
+          this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 15개의 코인을 선택합니다.")
+          coinList.subListOrAll(15)
+        }).let { Mono.just(it) }
       }
       .doOnNext { this.logger.info("최종으로 선발된 후보 코인은 다음과 같습니다 : ${it.map { t -> t.market.quote }}") }
       .flatMap { Mono.just(it.shuffled().take(coinCount)) }
@@ -201,7 +209,7 @@ class ManagerService(
    * 2. RSI 지표가 70 이상인 것은 거래하지 않음.
    * */
   private fun isTradeable(ticker: TickerResponse): Mono<Boolean> {
-    return this.upbitClient.candle.getMinute(CandleMinuteRequest(ticker.market, 60, 10))
+    return this.upbitClient.candle.getMinute(CandleMinuteRequest(ticker.market, 37, 10))
       .collectList()
       .flatMap { candles ->
         var result = true
@@ -216,9 +224,9 @@ class ManagerService(
 
         // rule 2
         val rsi = candles
-          .sortedBy { it.timestamp }
+          .sortedByDescending { it.timestamp }
           .map { it.tradePrice }
-          .let { this.calculateRSI(it, 20) }
+          .let { this.calculateRSI(it) }
         if (rsi >= 70.0) {
           result = false
           this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (70 이상) 이어서 거래하지 않습니다.")
@@ -228,38 +236,29 @@ class ManagerService(
       }
   }
 
-  private fun calculateRSI(prices: List<Double>, period: Int): Double {
-    var averageGain = 0.0
-    var averageLoss = 0.0
-
-    // 첫 번째 기간 동안의 평균 상승 및 하락 계산
-    for (i in 1 until period) {
-      val change = prices[i] - prices[i - 1]
-      if (change > 0) {
-        averageGain += change
-      } else {
-        averageLoss -= change
+  private fun calculateRSI(prices: List<Double>, period: Int = prices.size / 2): Double {
+    return prices
+      .windowed(2, 1, false) { it[1] - it[0] }
+      .let { changes ->
+        val sma = changes.subList(0, period)
+          .let { smaPeriod -> Pair(
+            smaPeriod.filter { it > 0 }.sum() / smaPeriod.size,
+            smaPeriod.filter { it < 0 }.sum() / smaPeriod.size * -1.0
+          ) }
+        val smoothing = 2.0 / (period + 1).toDouble()
+        changes.subList(period, changes.size)
+          .fold(sma) { ema, change ->
+            when {
+              change > 0 -> Pair(
+                (change * smoothing) + (ema.first * (1.0 - smoothing)), ema.second * (1 - smoothing))
+              change < 0 -> Pair(
+                ema.first * (1 - smoothing), ((change * -1.0) * smoothing) + (ema.second * (1.0 - smoothing)))
+              else -> Pair(ema.first * (1 - smoothing), ema.second * (1 - smoothing))
+            }
+          }.let {
+            (if (it.second == 0.0) { 0.0 } else { it.first / it.second })
+              .let { rs -> 100.0 - (100.0 / (1 + rs))}
+          }
       }
-    }
-
-    averageGain /= period
-    averageLoss /= period
-
-    // 나머지 기간에 대한 평균 상승 및 하락 업데이트
-    for (i in period until prices.size) {
-      val change = prices[i] - prices[i - 1]
-      if (change > 0) {
-        averageGain = (averageGain * (period - 1) + change) / period
-        averageLoss = (averageLoss * (period - 1)) / period
-      } else {
-        averageGain = (averageGain * (period - 1)) / period
-        averageLoss = (averageLoss * (period - 1) - change) / period
-      }
-    }
-
-    val rs = averageGain / averageLoss
-    val rsi = 100 - (100 / (1 + rs))
-
-    return rsi
   }
 }
