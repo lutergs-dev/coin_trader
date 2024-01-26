@@ -1,5 +1,6 @@
 package dev.lutergs.santa.trade.worker.domain
 
+import dev.lutergs.santa.trade.worker.domain.entity.SellType
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import dev.lutergs.upbitclient.api.exchange.order.PlaceOrderRequest
@@ -8,6 +9,7 @@ import dev.lutergs.upbitclient.webclient.BasicClient
 import dev.lutergs.upbitclient.webclient.Client
 import reactor.core.publisher.Mono
 import java.time.Duration
+import java.util.UUID
 
 
 class UpbitClient(
@@ -26,35 +28,38 @@ class UpbitClient(
   fun placeBuyOrderAndWait(req: PlaceOrderRequest): Mono<OrderResponse> {
     return req.side
       .takeIf { it == OrderSide.BID }
-      ?.let {this.placeOrderAndWait(req) }
+      ?.let { _ ->
+        this.order.placeOrder(req)
+          .flatMap { this.repository.newBuyOrder(it.toOrderResponse()) }
+          .flatMap { this.waitOrderUntilComplete(it.uuid) }
+          .flatMap { this.repository.finishBuyOrder(it) }
+      }
       ?: Mono.error(IllegalArgumentException("매수용 함수에 매도 주문을 넣었습니다."))
   }
 
-  fun placeSellOrderAndWait(req: PlaceOrderRequest, buyOrder: OrderResponse): Mono<OrderResponse> {
+  fun placeSellOrderAndWait(req: PlaceOrderRequest, buyOrder: OrderResponse, sellType: SellType): Mono<OrderResponse> {
     return req.side
       .takeIf { it == OrderSide.ASK }
-      ?.let { this.placeOrderAndWait(req, buyOrder) }
+      ?.let { _ ->
+        this.order.placeOrder(req)
+          .flatMap { this.repository.newSellOrder(it.toOrderResponse(), buyOrder.uuid) }
+          .flatMap { this.waitOrderUntilComplete(it.uuid) }
+          .flatMap { this.repository.finishSellOrder(buyOrder, it, sellType) }
+      }
       ?: Mono.error(IllegalArgumentException("매도용 함수에 매수 주문을 넣었습니다."))
   }
-
-  private fun placeOrderAndWait(req: PlaceOrderRequest, buyOrder: OrderResponse? = null): Mono<OrderResponse> {
-      return this.order.placeOrder(req)
-        .flatMap { when (req.side) {
-            OrderSide.BID -> this.repository.newBuyOrder(it.toOrderResponse())
-            OrderSide.ASK -> this.repository.newSellOrder(it.toOrderResponse(), buyOrder!!.uuid)
-        } }
-        .flatMap { orderResponse ->
-          Mono.defer { this.order.getOrder(OrderRequest(orderResponse.uuid)) }
-            .flatMap {
-              if (it.isFinished()) Mono.just(it)
-              else Mono.empty()
-            }.repeatWhenEmpty (Integer.MAX_VALUE) {
-              it.delayElements(this.waitWatchSecond)
-            }
-        }.flatMap { when (req.side) {
-          OrderSide.BID -> this.repository.finishBuyOrder(it)
-          OrderSide.ASK -> this.repository.finishSellOrder(buyOrder!!, it)
-        } }
+  
+  private fun waitOrderUntilComplete(uuid: UUID): Mono<OrderResponse> {
+    return Mono.defer { this.order.getOrder(OrderRequest(uuid)) }
+      .flatMap { 
+        if (it.isFinished()) {
+          Mono.just(it)
+        } else {
+          Mono.empty()
+        }
+      }.repeatWhenEmpty (Integer.MAX_VALUE) {
+        it.delayElements(this.waitWatchSecond)
+      }
   }
 }
 

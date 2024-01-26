@@ -23,6 +23,7 @@ class ManagerService(
   private val upbitClient: BasicClient,
   private val repository: DangerCoinRepository,
   private val kubernetesInfo: KubernetesInfo,
+  private val workerConfig: WorkerConfig,
   private val maxMoney: Int,
   private val minMoney: Int
 ) {
@@ -128,6 +129,9 @@ class ManagerService(
                       .secretRef(V1SecretEnvSource().name(this.kubernetesInfo.envSecretName))
                     ))
                     .env(listOf(
+                      V1EnvVar().name("PROFIT_PERCENT").value(this.workerConfig.profitPercent.toString()),
+                      V1EnvVar().name("LOSS_PERCENT").value(this.workerConfig.lossPercent.toString()),
+                      V1EnvVar().name("WAIT_HOUR").value(this.workerConfig.waitHour.toString()),
                       V1EnvVar().name("START_MARKET").value(market.toString()),
                       V1EnvVar().name("START_MONEY").value(money.toString()),
                       V1EnvVar().name("APP_ID").value(generatedStr)

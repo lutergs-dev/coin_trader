@@ -19,6 +19,10 @@ custom:
   trade:
     start-market: ${START_MARKET:KRW-BTC}
     start-money: ${START_MONEY:10000}
+    sell:
+      profit-percent: ${PROFIT_PERCENT:1}
+      loss-percent: ${LOSS_PERCENT:2}
+      wait-hour: ${WAIT_HOUR:3}
   upbit:
     access-key: ${UPBIT_ACCESS_KEY:upbit-access-key}
     secret-key: ${UPBIT_SECRET_KEY:upbit-secret-key}

@@ -39,6 +39,7 @@ class OrderEntity: Persistable<String>, Serializable {
   @Column(value = "sell_finish_at") var sellFinishAt: OffsetDateTime? = null
 
   @Column(value = "profit") var profit: Double? = null
+  @Column(value = "sell_type") var sellType: String? = null
 
   @Transient
   @JsonIgnore
@@ -54,6 +55,18 @@ class OrderEntity: Persistable<String>, Serializable {
 
   fun setNewInstance() {
     this.newInstance = true
+  }
+
+  fun sellTypeStr(): String? {
+    return this.sellType
+      ?.let {
+        when (it) {
+          "PROFIT" -> "익절"
+          "LOSS" -> "손절"
+          "TIMEOUT" -> "시간초과"
+          else -> "오류"
+        }
+      }
   }
 }
 

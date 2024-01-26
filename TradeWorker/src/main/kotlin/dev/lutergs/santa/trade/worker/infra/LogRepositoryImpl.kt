@@ -2,6 +2,7 @@ package dev.lutergs.santa.trade.worker.infra
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import dev.lutergs.santa.trade.worker.domain.LogRepository
+import dev.lutergs.santa.trade.worker.domain.entity.SellType
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import org.slf4j.LoggerFactory
 import org.springframework.data.annotation.Id
@@ -41,6 +42,7 @@ class OrderEntity: Persistable<String>, Serializable {
   @Column(value = "sell_finish_at") var sellFinishAt: OffsetDateTime? = null
 
   @Column(value = "profit") var profit: Double? = null
+  @Column(value = "sell_type") var sellType: String? = null
 
   @Transient @JsonIgnore private var newInstance: Boolean = false
 
@@ -113,7 +115,7 @@ class LogRepositoryImpl(
         it.sellPrice = response.price
         it.sellVolume = response.volume
         it.sellFee = if (response.state == "done") {
-          response.paidFee
+          listOf(response.paidFee, response.reservedFee, response.remainingFee).max()
         } else {
           response.reservedFee
         }
@@ -123,13 +125,14 @@ class LogRepositoryImpl(
       }.thenReturn(response)
   }
 
-  override fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse): Mono<OrderResponse> {
+  override fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
     return this.retryFindById(buyResponse.uuid.toString())
       .flatMap {
         if (it.sellId != sellResponse.uuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
         else {
           it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
           it.profit = (sellResponse.price * sellResponse.volume) - (buyResponse.price * buyResponse.volume) - (buyResponse.paidFee + sellResponse.paidFee)
+          it.sellType = sellType.name
           this.retrySave(it).thenReturn(sellResponse)
         }
       }

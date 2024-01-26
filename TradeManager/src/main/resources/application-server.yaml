@@ -14,6 +14,11 @@ spring:
       sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY:api_key}' password='${KAFKA_API_SECRET:api_secret}';
 
 custom:
+  trade:
+    sell:
+      profit-percent: ${WORKER_PROFIT_PERCENT:1}
+      loss-percent: ${WORKER_LOSS_PERCENT:2}
+      wait-hour: ${WORKER_WAIT_HOUR:3}
   upbit:
     access-key: ${UPBIT_ACCESS_KEY:access-key}
     secret-key: ${UPBIT_SECRET_KEY:secret-key}

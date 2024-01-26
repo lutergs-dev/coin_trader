@@ -34,3 +34,7 @@ data class MainTrade(
   val market: MarketCode,
   val money: Int
 )
+
+enum class SellType {
+  PROFIT, LOSS, TIMEOUT
+}

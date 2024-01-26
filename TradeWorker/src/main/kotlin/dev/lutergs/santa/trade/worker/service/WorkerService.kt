@@ -107,7 +107,7 @@ class WorkerService(
             Mono.just(it.t1)
           } else if (currentPrice < request.price!! * this.lossTotalPercent) {
             this.logger.info("코인이 ${((1L - this.lossTotalPercent) * 100).toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
-            this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, buyOrder)
+            this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, buyOrder, SellType.LOSS)
               .flatMap { orderResponse ->
                 this.alarmSender.sendAlarm(
                   AlarmMessage(
@@ -122,16 +122,16 @@ class WorkerService(
         }.repeatWhenEmpty(Integer.MAX_VALUE) {
           it.delayElements(Duration.ofSeconds(this.watchInterval.toLong()))
         }.flatMap { sellResponse ->
-          this.repository.finishSellOrder(buyOrder, sellResponse)
+          this.repository.finishSellOrder(buyOrder, sellResponse, SellType.PROFIT)
         }.timeout(this.waitDuration)
           .onErrorResume(TimeoutException::class.java) {
             this.logger.info("${this.waitDuration.toHours()} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 판매합니다.")
-            this.cancelSellOrderAndSellByCurrentPrice(firstSellPlaceResponse.toOrderResponse(), buyOrder)
+            this.cancelSellOrderAndSellByCurrentPrice(firstSellPlaceResponse.toOrderResponse(), buyOrder, SellType.TIMEOUT)
         }
       }
   }
 
-  private fun cancelSellOrderAndSellByCurrentPrice(firstSellOrder: OrderResponse, buyOrder: OrderResponse): Mono<OrderResponse> {
+  private fun cancelSellOrderAndSellByCurrentPrice(firstSellOrder: OrderResponse, buyOrder: OrderResponse, sellType: SellType): Mono<OrderResponse> {
     return this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
       .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, buyOrder.uuid).thenReturn(it) }
       .flatMap { this.client.orderBook.getOrderBook(Markets.fromMarket(it.market)).next() }
@@ -143,7 +143,7 @@ class WorkerService(
           side = OrderSide.ASK,
           volume = firstSellOrder.volume,
           price = res.orderbookUnits.first().bidPrice
-        ).let { this.client.placeSellOrderAndWait(it, buyOrder) }
+        ).let { this.client.placeSellOrderAndWait(it, buyOrder, sellType) }
       }.doOnNext { this.logger.info("[${this.serviceId}] 코인 현재가 매도가 완료되었습니다.") }
   }
 

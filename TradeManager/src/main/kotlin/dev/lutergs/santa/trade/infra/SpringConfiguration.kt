@@ -1,10 +1,7 @@
 package dev.lutergs.santa.trade.infra
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import dev.lutergs.santa.trade.domain.AlertMessageSender
-import dev.lutergs.santa.trade.domain.DangerCoinRepository
-import dev.lutergs.santa.trade.domain.KubernetesInfo
-import dev.lutergs.santa.trade.domain.TradeHistoryRepository
+import dev.lutergs.santa.trade.domain.*
 import dev.lutergs.santa.trade.infra.impl.AlertMessageSenderImpl
 import dev.lutergs.santa.trade.service.AlertService
 import dev.lutergs.santa.trade.service.ManagerService
@@ -32,6 +29,15 @@ class SpringConfiguration {
   ): KubernetesInfo {
     return KubernetesInfo(namespace, imagePullSecretName, imagePullPolicy, imageName, envSecretName)
   }
+
+  @Bean
+  fun workerConfig(
+    @Value("\${custom.trade.sell.profit-percent}") profitPercent: Double,
+    @Value("\${custom.trade.sell.loss-percent}") lossPercent: Double,
+    @Value("\${custom.trade.sell.wait-hour}") waitHour: Long
+  ): WorkerConfig = WorkerConfig(
+    profitPercent, lossPercent, waitHour
+  )
   
   @Bean
   fun managerService(
@@ -39,10 +45,11 @@ class SpringConfiguration {
     client: BasicClient,
     dangerCoinRepository: DangerCoinRepository,
     kubernetesInfo: KubernetesInfo,
+    workerConfig: WorkerConfig,
     @Value("\${custom.trade.worker.max-money}") maxMoney: Int,
     @Value("\${custom.trade.worker.min-money}") minMoney: Int
   ): ManagerService = ManagerService(
-    alertService, client, dangerCoinRepository, kubernetesInfo, maxMoney, minMoney
+    alertService, client, dangerCoinRepository, kubernetesInfo, workerConfig, maxMoney, minMoney
   )
   
   @Bean
