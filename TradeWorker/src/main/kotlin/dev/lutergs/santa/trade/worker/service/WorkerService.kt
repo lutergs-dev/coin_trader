@@ -5,6 +5,7 @@ import dev.lutergs.santa.trade.worker.domain.UpbitClient
 import dev.lutergs.santa.trade.worker.domain.LogRepository
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.*
+import dev.lutergs.santa.trade.worker.domain.toStrWithPoint
 import dev.lutergs.santa.trade.worker.infra.LoggerCreate
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
@@ -105,7 +106,7 @@ class WorkerService(
             this.logger.info("코인을 이득을 보고 매매했습니다.")
             Mono.just(it.t1)
           } else if (currentPrice < request.price!! * this.lossTotalPercent) {
-            this.logger.info("코인이 ${(1L - this.lossTotalPercent) * 100}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
+            this.logger.info("코인이 ${((1L - this.lossTotalPercent) * 100).toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
             this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, buyOrder)
               .flatMap { orderResponse ->
                 this.alarmSender.sendAlarm(

@@ -2,7 +2,7 @@ custom:
   trade:
     sell:
       profit-percent: 1   # 이득 퍼센트. 1% 이상 이득이면 익절
-      loss-percent: 5     # 손실 퍼센트. 5% 이상 하락하면 손절
-      wait-hour: 6        # timeout 시간. 6시간 이상 팔리지 않으면 현재가로 매매
+      loss-percent: 2     # 손실 퍼센트. 2% 이상 하락하면 손절
+      wait-hour: 3        # timeout 시간. 6시간 이상 팔리지 않으면 현재가로 매매
     watch:
       interval: 3         # 현재가 확인 주기. 3초에 한 번씩 거래한 코인의 현재가 확인
