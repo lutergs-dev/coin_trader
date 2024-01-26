@@ -11,6 +11,7 @@ import org.springframework.data.relational.core.mapping.Table
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.io.Serializable
 import java.time.Duration
@@ -73,6 +74,7 @@ class OrderEntity: Persistable<String>, Serializable {
 @Repository
 interface OrderEntityReactiveRepository: ReactiveCrudRepository<OrderEntity, String> {
   fun findAllByBuyFinishAtBetween(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<OrderEntity>
+  fun findAllByBuyFinishAtAfter(buyFinishAt: OffsetDateTime): Flux<OrderEntity>
 }
 
 @Repository
@@ -82,6 +84,12 @@ class TradeHistoryRepositoryImpl(
   private val logger = LoggerFactory.getLogger(TradeHistoryRepositoryImpl::class.java)
   override fun getTradeHistoryBetweenDatetime(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<OrderEntity> {
     return this.repository.findAllByBuyFinishAtBetween(startAt, endAt)
+      .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
+      .doOnError { this.logger.error("error occured when search for history", it) }
+  }
+
+  override fun getTradeHistoryAfter(datetime: OffsetDateTime): Flux<OrderEntity> {
+    return this.repository.findAllByBuyFinishAtAfter(datetime)
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when search for history", it) }
   }

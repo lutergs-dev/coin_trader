@@ -30,34 +30,35 @@ class AlertService(
   }
 
   fun sendTodayEarning(): Mono<String> {
-    return LocalDateTime.now(ZoneId.of("Asia/Seoul"))
-      .let { this.tradeHistoryRepository.getTradeHistoryBetweenDatetime(
-        it.minusDays(1).atOffset(ZoneOffset.ofHours(9)),
-        it.atOffset(ZoneOffset.ofHours(9)))
-      }.let { orderEntityFlux ->
+    return OffsetDateTime.now(ZoneId.of("Asia/Seoul"))
+      .let { this.tradeHistoryRepository.getTradeHistoryAfter(it) }
+      .let { orderEntityFlux ->
         orderEntityFlux
           .filter {
             it.buyPlaceAt != null &&
-              it.coin != null &&
-              it.buyPrice != null &&
-              it.sellPrice != null &&
-              it.buyFinishAt != null &&
-              it.sellFinishAt != null &&
-              it.profit != null
+            it.coin != null &&
+            it.buyPrice != null &&
+            it.sellPrice != null &&
+            it.buyFinishAt != null &&
+            it.sellFinishAt != null &&
+            it.profit != null &&
+            it.sellType != null
           }.collectList()
           .flatMap { orderEntities -> Mono.fromCallable {
-            orderEntities.joinToString(separator = "\n") {
-              val isProfit = (if (it.buyPrice!! < it.sellPrice!!) "이득" else "손해")
-              "[${it.buyPlaceAt!!.toLocalDateTime().format(this.dateTimeFormatter)}]" +
-                " ${it.coin!!} ${it.buyPrice!!.toStrWithPoint()} 에 매수," +
-                " ${it.sellPrice!!.toStrWithPoint()} 에 ${it.sellTypeStr()} 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
-            }.let { body ->
-              Message(
-                topic = this.topicName,
-                title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
-                body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body"
-              )
-            }
+            orderEntities
+              .sortedBy { it.buyPlaceAt!! }
+              .joinToString(separator = "\n") {
+                val isProfit = (if (it.buyPrice!! < it.sellPrice!!) "이득" else "손해")
+                "[${it.buyPlaceAt!!.toLocalDateTime().format(this.dateTimeFormatter)}]" +
+                  " ${it.coin!!} ${it.buyPrice!!.toStrWithPoint()} 에 매수," +
+                  " ${it.sellPrice!!.toStrWithPoint()} 에 ${it.sellTypeStr()} 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
+              }.let { body ->
+                Message(
+                  topic = this.topicName,
+                  title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
+                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body"
+                )
+              }
           } }.flatMap { this.messageSender.sendMessage(it) }
       }
   }

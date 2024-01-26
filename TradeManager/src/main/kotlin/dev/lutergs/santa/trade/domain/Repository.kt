@@ -14,6 +14,7 @@ interface DangerCoinRepository {
 
 interface TradeHistoryRepository {
   fun getTradeHistoryBetweenDatetime(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<OrderEntity>
+  fun getTradeHistoryAfter(datetime: OffsetDateTime): Flux<OrderEntity>
 }
 
 interface AlertMessageSender {
