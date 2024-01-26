@@ -13,15 +13,18 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.time.Duration
-import java.time.LocalDateTime
+import java.util.Date
 
 
 @Document("danger_coins")
 class DangerCoinEntity {
   @Id var id: String? = null
-  @Field @Indexed(name = "expiration_index", expireAfter = "24h")
-  var expireIn: LocalDateTime = LocalDateTime.now()
 
+  @Field
+  @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 12)
+  var expireIn12h: Date = Date()
+
+  @Field
   var coinName: String = ""
 }
 
