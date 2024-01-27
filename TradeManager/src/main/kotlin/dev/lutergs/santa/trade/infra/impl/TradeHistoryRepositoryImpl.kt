@@ -6,8 +6,10 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.Transient
 import org.springframework.data.domain.Persistable
+import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
+import org.springframework.data.repository.query.Param
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
@@ -16,6 +18,8 @@ import reactor.util.retry.Retry
 import java.io.Serializable
 import java.time.Duration
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import javax.annotation.PostConstruct
 
 
 @Table(name = "coin_trade_order_list")
@@ -74,7 +78,8 @@ class OrderEntity: Persistable<String>, Serializable {
 @Repository
 interface OrderEntityReactiveRepository: ReactiveCrudRepository<OrderEntity, String> {
   fun findAllByBuyFinishAtBetween(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<OrderEntity>
-  fun findAllByBuyFinishAtAfter(buyFinishAt: OffsetDateTime): Flux<OrderEntity>
+
+  fun findByBuyFinishAtAfter(buyFinishAt: OffsetDateTime): Flux<OrderEntity>
 }
 
 @Repository
@@ -89,7 +94,7 @@ class TradeHistoryRepositoryImpl(
   }
 
   override fun getTradeHistoryAfter(datetime: OffsetDateTime): Flux<OrderEntity> {
-    return this.repository.findAllByBuyFinishAtAfter(datetime)
+    return this.repository.findByBuyFinishAtAfter(datetime)
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when search for history", it) }
   }
