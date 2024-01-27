@@ -104,7 +104,7 @@ class WorkerService(
 
           if (firstSellOrder.state == "done") {
             this.logger.info("코인을 이득을 보고 매매했습니다.")
-            Mono.just(it.t1)
+            Mono.just(Pair(it.t1, SellType.PROFIT))
           } else if (currentPrice < request.price!! * this.lossTotalPercent) {
             this.logger.info("코인이 ${((1L - this.lossTotalPercent) * 100).toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
             this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, buyOrder, SellType.LOSS)
@@ -115,14 +115,16 @@ class WorkerService(
                     AlarmMessageValue(orderResponse.uuid))
                 ).thenReturn(orderResponse)
                   .doOnNext { this.logger.info("[${this.serviceId}] 손실 매도한 코인 (${this.mainTrade.market.quote}) 에 대한 정보를 controller 로 전송했습니다.") }
+              }.flatMap {
+                Mono.just(Pair(it, SellType.LOSS))
               }
           } else {
             Mono.empty()
           }
         }.repeatWhenEmpty(Integer.MAX_VALUE) {
           it.delayElements(Duration.ofSeconds(this.watchInterval.toLong()))
-        }.flatMap { sellResponse ->
-          this.repository.finishSellOrder(buyOrder, sellResponse, SellType.PROFIT)
+        }.flatMap { sellResponsePair ->
+          this.repository.finishSellOrder(buyOrder, sellResponsePair.first, sellResponsePair.second)
         }.timeout(this.waitDuration)
           .onErrorResume(TimeoutException::class.java) {
             this.logger.info("${this.waitDuration.toHours()} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 판매합니다.")

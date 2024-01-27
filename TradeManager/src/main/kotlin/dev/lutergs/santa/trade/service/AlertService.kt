@@ -30,7 +30,7 @@ class AlertService(
   }
 
   fun sendTodayEarning(): Mono<String> {
-    return OffsetDateTime.now(ZoneId.of("Asia/Seoul"))
+    return OffsetDateTime.now(ZoneId.of("Asia/Seoul")).minusDays(1)
       .let { this.tradeHistoryRepository.getTradeHistoryAfter(it) }
       .let { orderEntityFlux ->
         orderEntityFlux
