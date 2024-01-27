@@ -2,18 +2,15 @@ package dev.lutergs.santa.trade
 
 import io.kubernetes.client.openapi.Configuration
 import io.kubernetes.client.util.Config
-import io.kubernetes.client.util.KubeConfig
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent
 import org.springframework.context.ApplicationListener
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertySource
-import org.springframework.core.env.get
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileReader
-import java.io.Reader
 import java.util.*
 
 class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPreparedEvent> {

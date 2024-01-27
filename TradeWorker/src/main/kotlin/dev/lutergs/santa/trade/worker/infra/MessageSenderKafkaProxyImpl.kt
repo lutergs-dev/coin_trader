@@ -5,13 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.AlarmMessage
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
-import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
-import java.net.URI
 import java.time.Duration
 import java.util.*
 

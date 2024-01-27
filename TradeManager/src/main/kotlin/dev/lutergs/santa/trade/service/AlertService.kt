@@ -53,10 +53,14 @@ class AlertService(
                   " ${it.coin!!} ${it.buyPrice!!.toStrWithPoint()} 에 매수," +
                   " ${it.sellPrice!!.toStrWithPoint()} 에 ${it.sellTypeStr()} 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
               }.let { body ->
+                val total = orderEntities.groupBy { it.sellType ?: "ERROR" }
+                  .let {
+                    "이득 ${it["PROFIT"]?.size ?: 0}반, 손실 ${it["LOSS"]?.size ?: 0}번, 시간초과 ${it["TIMEOUT"]?.size ?: 0}번이 있었습니다."
+                  }
                 Message(
                   topic = this.topicName,
                   title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
-                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body"
+                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body\n\n$total"
                 )
               }
           } }.flatMap { this.messageSender.sendMessage(it) }

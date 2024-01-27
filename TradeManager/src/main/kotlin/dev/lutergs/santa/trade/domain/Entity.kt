@@ -1,10 +1,5 @@
 package dev.lutergs.santa.trade.domain
 
-import dev.lutergs.santa.trade.infra.impl.OrderEntity
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Mono
-import java.time.format.DateTimeFormatter
-
 data class KubernetesInfo (
   val namespace: String,
   val imagePullSecretName: String,
@@ -35,3 +30,5 @@ data class Message (
     }
   }
 }
+
+// TODO : order state 를 관리하는 entity 작성 필요

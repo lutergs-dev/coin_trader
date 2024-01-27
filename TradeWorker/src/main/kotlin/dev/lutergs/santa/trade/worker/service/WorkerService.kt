@@ -14,7 +14,6 @@ import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.dto.OrderSide
 import dev.lutergs.upbitclient.dto.OrderType
 import jakarta.annotation.PostConstruct
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
