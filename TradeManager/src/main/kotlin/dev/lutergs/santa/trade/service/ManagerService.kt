@@ -197,23 +197,24 @@ class ManagerService(
      * 가중치는 n호가 (총구매가격 - 총판매가격) 의 ( (15-n) / 15 ) 를 반영함. 즉, 1호가에 가까운 가격일수록 크게 반영
      *
      * (2023.01.26) 근데 이건 너무 고정된 결과를 낳을 수도 있다. 일단 이걸 방지하고자 거래량 자체를 판단하는 것으로 수정
+     * (2023.01.28) 손실이 너무 커서, 이거 넣어서 테스트해봐야할듯.
      * */
-    return Mono.just(ticker.accTradePrice24h)
-//    return this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
-//      .next()
-//      .flatMap { orderbook ->
-//        val length = orderbook.orderbookUnits.size
-//        orderbook.orderbookUnits
-//          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((length - idx) / length) }
-//          .sum()
-//          .let { Mono.just(it) }
-//      }
+//    return Mono.just(ticker.accTradePrice24h)
+    return this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))
+      .next()
+      .flatMap { orderbook ->
+        val length = orderbook.orderbookUnits.size
+        orderbook.orderbookUnits
+          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((length - idx) / length) }
+          .sum()
+          .let { Mono.just(it) }
+      }
   }
 
   /**
-   * 최근부터 3시간 동안의 데이터를 확인해, 다음과 같은 기준을 따름.
+   * 최근부터 6시간 동안의 데이터를 확인해, 다음과 같은 기준을 따름.
    * 1. 고가가 현재가 기준 2배 이상, 저가가 현재가 기준 80% 이상일 때는 거래하지 않음
-   * 2. RSI 지표가 70 이상인 것은 거래하지 않음.
+   * 2. RSI 지표가 80 이상인 것은 거래하지 않음.
    * */
   private fun isTradeable(ticker: TickerResponse): Mono<Boolean> {
     return this.upbitClient.candle.getMinute(CandleMinuteRequest(ticker.market, 37, 10))
@@ -234,9 +235,9 @@ class ManagerService(
           .sortedByDescending { it.timestamp }
           .map { it.tradePrice }
           .let { this.calculateRSI(it) }
-        if (rsi >= 70.0) {
+        if (rsi >= 80.0) {
           result = false
-          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (70 이상) 이어서 거래하지 않습니다.")
+          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (80 이상) 이어서 거래하지 않습니다.")
         }
 
         Mono.just(result)
