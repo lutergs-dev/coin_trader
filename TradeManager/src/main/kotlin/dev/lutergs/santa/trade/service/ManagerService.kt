@@ -214,7 +214,7 @@ class ManagerService(
   /**
    * 최근부터 6시간 동안의 데이터를 확인해, 다음과 같은 기준을 따름.
    * 1. 고가가 현재가 기준 2배 이상, 저가가 현재가 기준 80% 이상일 때는 거래하지 않음
-   * 2. RSI 지표가 80 이상인 것은 거래하지 않음.
+   * 2. RSI 지표가 20이하 80 이상인 것은 거래하지 않음.
    * */
   private fun isTradeable(ticker: TickerResponse): Mono<Boolean> {
     return this.upbitClient.candle.getMinute(CandleMinuteRequest(ticker.market, 37, 10))
@@ -235,9 +235,9 @@ class ManagerService(
           .sortedByDescending { it.timestamp }
           .map { it.tradePrice }
           .let { this.calculateRSI(it) }
-        if (rsi >= 80.0) {
+        if (rsi >= 80.0 || rsi <= 20.0) {
           result = false
-          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (80 이상) 이어서 거래하지 않습니다.")
+          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (80 이상 혹은 20 이하) 이어서 거래하지 않습니다.")
         }
 
         Mono.just(result)

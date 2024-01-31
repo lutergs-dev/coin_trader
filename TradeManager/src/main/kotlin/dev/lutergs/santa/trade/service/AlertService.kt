@@ -55,7 +55,7 @@ class AlertService(
               }.let { body ->
                 val total = orderEntities.groupBy { it.sellType ?: "ERROR" }
                   .let {
-                    "이득 ${it["PROFIT"]?.size ?: 0}반, 손실 ${it["LOSS"]?.size ?: 0}번, 시간초과 ${it["TIMEOUT"]?.size ?: 0}번이 있었습니다."
+                    "이득 ${it["PROFIT"]?.size ?: 0}번, 손실 ${it["LOSS"]?.size ?: 0}번, 시간초과 ${it["TIMEOUT"]?.size ?: 0}번이 있었습니다."
                   }
                 Message(
                   topic = this.topicName,
