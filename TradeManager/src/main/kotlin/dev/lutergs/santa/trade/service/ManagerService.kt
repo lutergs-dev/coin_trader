@@ -149,8 +149,12 @@ class ManagerService(
   private fun findApplicableCoin(coinCount: Int): Mono<List<TickerResponse>> {
     if (coinCount < 0) throw IllegalArgumentException("코인 개수는 0 이상의 값을 지정해야 합니다")
     return this.upbitClient.market.getMarketCode()
-      .filter { it.market.base == "KRW" && it.marketWarning != MarketWarning.CAUTION }
-      .flatMap { Mono.just(it.market) }
+      .filter {
+        if (it.market.base == "KRW" && it.marketWarning == MarketWarning.CAUTION) {
+          this.logger.info("코인 ${it.market.quote} 은 CAUTION 상태라서 거래하지 않습니다.")
+        }
+        it.market.base == "KRW" && it.marketWarning != MarketWarning.CAUTION
+      }.flatMap { Mono.just(it.market) }
       .collectList()
       .doOnNext { this.logger.info("한화로 거래 가능하며, 위험 상태가 아닌 코인 리스트는 다음과 같습니다 : ${it.map { d -> d.quote }}") }
       .flatMap { Mono.just(Markets(it)) }
