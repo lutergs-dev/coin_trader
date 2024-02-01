@@ -131,7 +131,7 @@ class ManagerService(
                     .env(listOf(
                       V1EnvVar().name("PHASE_1_WAIT_MINUTE").value(this.workerConfig.phase1.waitMinute.toString()),
                       V1EnvVar().name("PHASE_1_PROFIT_PERCENT").value(this.workerConfig.phase1.profitPercent.toStrWithPoint(1)),
-                      V1EnvVar().name("PHASE_1_LOSS_PERCENT").value(this.workerConfig.phase1.profitPercent.toStrWithPoint(1)),
+                      V1EnvVar().name("PHASE_1_LOSS_PERCENT").value(this.workerConfig.phase1.lossPercent.toStrWithPoint(1)),
                       V1EnvVar().name("PHASE_2_WAIT_MINUTE").value(this.workerConfig.phase2.waitMinute.toString()),
                       V1EnvVar().name("PHASE_2_LOSS_PERCENT").value(this.workerConfig.phase2.lossPercent.toStrWithPoint(1)),
                       V1EnvVar().name("START_MARKET").value(market.toString()),
