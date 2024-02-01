@@ -54,9 +54,7 @@ class AlertService(
                   " ${it.sellPrice!!.toStrWithPoint()} 에 ${it.sellTypeStr()} 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
               }.let { body ->
                 val total = orderEntities.groupBy { it.sellType ?: "ERROR" }
-                  .let {
-                    "이득 ${it["PROFIT"]?.size ?: 0}번, 손실 ${it["LOSS"]?.size ?: 0}번, 시간초과 ${it["TIMEOUT"]?.size ?: 0}번이 있었습니다."
-                  }
+                  .let { "이득 ${(it["PROFIT"]?.size ?: 0) + (it["STOP_PROFIT"]?.size ?: 0)}번, 손실 ${(it["LOSS"]?.size ?: 0) + (it["STOP_LOSS"]?.size ?: 0)}번, 시간초과 ${it["TIMEOUT"]?.size ?: 0}번이 있었습니다." }
                 Message(
                   topic = this.topicName,
                   title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
