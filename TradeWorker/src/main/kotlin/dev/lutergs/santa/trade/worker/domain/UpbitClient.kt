@@ -30,7 +30,8 @@ class UpbitClient(
       .takeIf { it == OrderSide.BID }
       ?.let { _ ->
         this.order.placeOrder(req)
-          .flatMap { this.repository.newBuyOrder(it.toOrderResponse()) }
+          .flatMap { this.order.getOrder(OrderRequest(it.uuid)) }
+          .flatMap { this.repository.newBuyOrder(it) }
           .flatMap { this.waitOrderUntilComplete(it.uuid) }
           .flatMap { this.repository.finishBuyOrder(it) }
       }
@@ -42,7 +43,8 @@ class UpbitClient(
       .takeIf { it == OrderSide.ASK }
       ?.let { _ ->
         this.order.placeOrder(req)
-          .flatMap { this.repository.newSellOrder(it.toOrderResponse(), buyOrder.uuid) }
+          .flatMap { this.order.getOrder(OrderRequest(it.uuid)) }
+          .flatMap { this.repository.newSellOrder(it, buyOrder.uuid) }
           .flatMap { this.waitOrderUntilComplete(it.uuid) }
           .flatMap { this.repository.finishSellOrder(buyOrder, it, sellType) }
       }
@@ -52,7 +54,7 @@ class UpbitClient(
   private fun waitOrderUntilComplete(uuid: UUID): Mono<OrderResponse> {
     return Mono.defer { this.order.getOrder(OrderRequest(uuid)) }
       .flatMap { 
-        if (it.isFinished()) {
+        if (it.isFinished) {
           Mono.just(it)
         } else {
           Mono.empty()

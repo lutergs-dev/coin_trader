@@ -90,10 +90,10 @@ class LogRepositoryImpl(
       .apply {
         this.coin = response.market.quote
         this.buyId = response.uuid.toString()
-        this.buyPrice = response.price
+        this.buyPrice = response.avgPrice
         this.buyFee = response.reservedFee
-        this.buyVolume = response.volume
-        this.buyWon = response.price * response.getTotalVolume() - response.reservedFee
+        this.buyVolume = response.totalVolume
+        this.buyWon = response.avgPrice * response.totalVolume - response.reservedFee
         this.buyPlaceAt = response.createdAt
         this.setNewInstance()
       }.let { this.retrySave(it).thenReturn(response) }
@@ -111,10 +111,10 @@ class LogRepositoryImpl(
     return this.retryFindById(buyUuid.toString())
       .flatMap {
         it.sellId = response.uuid.toString()
-        it.sellPrice = response.price
-        it.sellVolume = response.volume
+        it.sellPrice = response.avgPrice
+        it.sellVolume = response.totalVolume
         it.sellFee = listOf(response.paidFee, response.reservedFee, response.remainingFee).maxOrNull()!!
-        it.sellWon = response.price * response.getTotalVolume() - it.sellFee!!
+        it.sellWon = response.avgPrice * response.totalVolume - it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.retrySave(it)
       }.thenReturn(response)
@@ -126,7 +126,7 @@ class LogRepositoryImpl(
         if (it.sellId != sellResponse.uuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
         else {
           it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
-          it.profit = (sellResponse.price * sellResponse.getTotalVolume()) - (buyResponse.price * buyResponse.getTotalVolume()) - (buyResponse.paidFee + sellResponse.paidFee)
+          it.profit = (sellResponse.avgPrice * sellResponse.totalVolume) - (buyResponse.avgPrice * buyResponse.totalVolume) - (buyResponse.paidFee + sellResponse.paidFee)
           it.sellType = sellType.name
           it.sellFee = listOf(sellResponse.paidFee, sellResponse.reservedFee, sellResponse.remainingFee).maxOrNull()!!
           this.retrySave(it).thenReturn(sellResponse)

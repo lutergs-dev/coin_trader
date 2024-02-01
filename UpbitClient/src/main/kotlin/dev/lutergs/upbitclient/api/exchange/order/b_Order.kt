@@ -46,7 +46,7 @@ data class OrderResponse(
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime,
   @JsonProperty("volume") val volume: Double? = null,
-  @JsonProperty("remaining_volume") val remainingVolume: Double,
+  @JsonProperty("remaining_volume") val remainingVolume: Double? = null,
   @JsonProperty("reserved_fee") val reservedFee: Double,
   @JsonProperty("remaining_fee") val remainingFee: Double,
   @JsonProperty("paid_fee") val paidFee: Double,
@@ -55,10 +55,25 @@ data class OrderResponse(
   @JsonProperty("trades_count") val tradesCount: Int,
   @JsonProperty("trades") val trades: List<OrderTrade>
 ) {
-  fun isFinished() = this.state == "done"
+  val isFinished: Boolean = when (this.orderType) {
+    "price" -> this.state == "cancel"
+    "market" -> this.state == "cancel"
+    "limit" -> this.state == "done"
+    else -> this.state == "done"
+  }
 
-  fun getTotalVolume(): Double {
-    return this.executedVolume + this.remainingVolume
+  val totalVolume: Double = when (this.orderType) {
+    "price" -> this.trades.sumOf { it.volume }
+    "market" -> this.volume!!
+    "limit" -> this.volume!!
+    else -> this.volume!!
+  }
+
+  val avgPrice: Double = when (this.orderType) {
+    "price" -> trades.sumOf { it.price * it.volume } / trades.sumOf { it.volume }
+    "market" -> trades.sumOf { it.price * it.volume } / trades.sumOf { it.volume }
+    "limit" -> price
+    else -> price
   }
 }
 
