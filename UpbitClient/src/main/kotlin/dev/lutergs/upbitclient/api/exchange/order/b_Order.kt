@@ -37,7 +37,7 @@ data class OrderResponse(
   @JsonProperty("uuid") val uuid: UUID,
   @JsonProperty("side") val side: String,
   @JsonProperty("ord_type") val orderType: String,
-  @JsonProperty("price") val price: Double,
+  @JsonProperty("price") val price: Double? = null,
   @JsonProperty("state") val state: String,        // done 이 완료
   @JsonSerialize(using = MarketCodeSerializer::class)
   @JsonDeserialize(using = MarketCodeDeserializer::class)
@@ -72,8 +72,8 @@ data class OrderResponse(
   val avgPrice: Double = when (this.orderType) {
     "price" -> trades.sumOf { it.price * it.volume } / trades.sumOf { it.volume }
     "market" -> trades.sumOf { it.price * it.volume } / trades.sumOf { it.volume }
-    "limit" -> price
-    else -> price
+    "limit" -> price!!
+    else -> price!!
   }
 }
 
