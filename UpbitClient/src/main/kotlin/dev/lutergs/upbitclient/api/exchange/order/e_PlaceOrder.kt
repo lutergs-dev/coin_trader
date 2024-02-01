@@ -37,7 +37,7 @@ data class PlaceOrderResponse(
   @JsonProperty("side") val side: String,
   @JsonProperty("ord_type") val ordType: String,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("price") val price: Double,
+  @JsonProperty("price") val price: Double? = null,
   @JsonProperty("state") val state: String,
   @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
@@ -56,6 +56,6 @@ data class PlaceOrderResponse(
   @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("locked") val locked: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("executed_volume") val executedVolume: Double,
+  @JsonProperty("executed_volume") val executedVolume: Double? = null,
   @JsonProperty("trades_count") val tradesCount: Int
 )
