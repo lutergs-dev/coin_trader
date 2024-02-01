@@ -8,24 +8,20 @@ import dev.lutergs.santa.trade.worker.domain.entity.*
 import dev.lutergs.santa.trade.worker.domain.toStrWithPoint
 import dev.lutergs.santa.trade.worker.infra.LoggerCreate
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
-import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import dev.lutergs.upbitclient.api.exchange.order.PlaceOrderRequest
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.dto.OrderSide
 import dev.lutergs.upbitclient.dto.OrderType
 import jakarta.annotation.PostConstruct
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
-import reactor.util.retry.Retry
 import java.time.Duration
 import java.time.LocalDateTime
-import java.util.concurrent.TimeoutException
 
 @Service
 class WorkerService(
@@ -61,17 +57,14 @@ class WorkerService(
   }
 
   fun buyCoin(): Mono<TradeStatus> {
-    return this.client.orderBook.getOrderBook(Markets.fromMarket(this.mainTrade.market))
-      .next()
-      .flatMap { orderBookResponse ->
-        // get the lowest sell price and buy
-        val lowestPrice = orderBookResponse.orderbookUnits[0].askPrice
-        val calculatedVolume = (this.mainTrade.money.toDouble() / lowestPrice)//(lowestPrice /  this.mainTrade.money.toDouble())
-        PlaceOrderRequest(this.mainTrade.market, OrderType.LIMIT, OrderSide.BID, calculatedVolume, lowestPrice)
-          .also { this.originLogger.info("코인 구매를 시작합니다. 대상 코인 : ${it.market}, 가격 : $lowestPrice, 구매량 : $calculatedVolume, 총금액: ${this.mainTrade.money.toDouble()}") }
-          .let { this.client.placeBuyOrderAndWait(it) }
-          .doOnNext { this.originLogger.info("코인 구매가 완료되었습니다. 구매 UUID : ${it.uuid}") }
-          .flatMap { Mono.just(TradeStatus(buy = Order(it, OrderStatus.COMPLETE), sell = null, sellType = null)) }
+    return this.client.order.placeOrder(PlaceOrderRequest(this.mainTrade.market, OrderType.PRICE, OrderSide.BID, price = this.mainTrade.money.toDouble()))
+      .flatMap { placeOrderResponse ->
+        this.client.order.getOrder(OrderRequest(uuid = placeOrderResponse.uuid))
+          .flatMap { if (it.state == "done") Mono.fromCallable { it } else Mono.empty() }
+          .repeatWhenEmpty(30 * 10) {
+            it.delayElements(Duration.ofSeconds(2))
+          }.flatMap { this.repository.newBuyOrder(it) }
+          .flatMap { Mono.fromCallable { TradeStatus(buy = Order(it, OrderStatus.COMPLETE), sell = null, sellType = null) } }
       }
   }
 
@@ -89,7 +82,7 @@ class WorkerService(
           .filter { it.bidPrice > this.phase.phase1.getLossPrice(tradeStatus.buy.order.price) }
           .minOf { it.bidPrice }
         PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.volume, profitPrice)
-          .also { logger.info("코인의 이득점을 설정했습니다. 가격 : ${it.price}, 총금액 : ${it.volume!! * it.price!!}. 앞으로 2시간 반동안, 코인의 가격이 $profitPrice (이득점) 혹은 $lossPrice (손실점) 에 도달하면 판매합니다.") }
+          .also { logger.info("코인의 이득점을 설정했습니다. 가격 : ${it.price?.toStrWithPoint()}, 총금액 : ${(it.volume!! * it.price!!).toStrWithPoint()}. 앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithPoint()} (이득점) 혹은 ${lossPrice.toStrWithPoint()} (손실점) 에 도달하면 판매합니다.") }
           .let { request ->
             this.client.order.placeOrder(request)
               .doOnNext { logger.info("코인의 이득 판매 주문을 올렸습니다.") }
@@ -98,10 +91,10 @@ class WorkerService(
                 // 1초에 한 번씩 가격과 오더 상태를 같이 확인함
                 Mono.zip(
                   Mono.defer { this.client.order.getOrder(OrderRequest(profitOrder.uuid)) },
-                  Mono.defer { this.client.orderBook.getOrderBook(Markets.fromMarket(profitOrder.market)).next() }
+                  Mono.defer { this.client.ticker.getTicker(Markets.fromMarket(profitOrder.market)).next() }
                 ).flatMap { p ->
                   val firstSellOrder = p.t1
-                  val currentPrice = p.t2.orderbookUnits.first().bidPrice
+                  val currentPrice = p.t2.tradePrice
                   // log
                   this.logCurrentStatus(tradeStatus, currentPrice, profitPrice, lossPrice, logger)
 
@@ -111,7 +104,11 @@ class WorkerService(
                       .thenReturn(tradeStatus.sellFinished(firstSellOrder, SellType.PROFIT))
                   } else if (currentPrice <= lossPrice) {
                     logger.info("코인이 ${this.phase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
-                    this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, tradeStatus.buy.order, SellType.LOSS, logger)
+                    this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
+                      .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, tradeStatus.buy.order.uuid).thenReturn(it) }
+                      .doOnNext { logger.info("코인 매도 주문을 취소했습니다. 현재 가격으로 매도합니다.") }
+                      .flatMap { this.client.placeSellOrderAndWait(PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = firstSellOrder.volume), tradeStatus.buy.order, SellType.LOSS) }
+                      .doOnNext { logger.info("코인 현재가 매도가 완료되었습니다.") }
                       .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.LOSS) } }
                   } else {
                     Mono.empty()
@@ -132,19 +129,19 @@ class WorkerService(
    * 한시간 반 동안, 구매 가격보다 높으면 무조건 매매
    * */
   fun phase2(tradeStatus: TradeStatus, logger: Logger): Mono<TradeStatus> {
-    return Mono.defer { this.client.orderBook.getOrderBook(Markets.fromMarket(tradeStatus.buy.order.market)).next() }
-      .flatMap { orderbook ->
-        val currentPrice = orderbook.orderbookUnits.first().bidPrice
+    return Mono.defer { this.client.ticker.getTicker(Markets.fromMarket(tradeStatus.buy.order.market)).next() }
+      .flatMap { ticker ->
+        val currentPrice = ticker.tradePrice
 
         this.logCurrentStatus(tradeStatus, currentPrice, logger = logger)
 
         if (currentPrice > tradeStatus.buy.order.price) {
-          PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.volume, currentPrice)
+          PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.MARKET, OrderSide.ASK, volume = tradeStatus.buy.order.volume)
             .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.STOP_PROFIT) }
             .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.STOP_PROFIT) } }
         } else if (currentPrice <= this.phase.phase2.getLossPrice(tradeStatus.buy.order.price)) {
           logger.info("코인이 ${this.phase.phase2.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
-          PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.volume, currentPrice)
+          PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.MARKET, OrderSide.ASK, volume = tradeStatus.buy.order.volume)
             .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.STOP_LOSS) }
             .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.STOP_LOSS) } }
         } else {
@@ -164,26 +161,6 @@ class WorkerService(
   }
 
 
-
-  // TODO: Phase 에 따라 함수 최적화 필요
-  private fun cancelSellOrderAndSellByCurrentPrice(firstSellOrder: OrderResponse, buyOrder: OrderResponse, sellType: SellType, logger: Logger): Mono<OrderResponse> {
-    return this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
-      .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, buyOrder.uuid).thenReturn(it) }
-      .flatMap { this.client.orderBook.getOrderBook(Markets.fromMarket(it.market)).next() }
-      .flatMap { res ->
-        logger.info("코인 매도 주문을 취소했습니다. 현재 가격인 ${res.orderbookUnits.first().bidPrice} 에 매도합니다.")
-        PlaceOrderRequest(
-          market = res.market,
-          type = OrderType.LIMIT,
-          side = OrderSide.ASK,
-          volume = firstSellOrder.volume,
-          price = res.orderbookUnits.first().bidPrice
-        ).let { this.client.placeSellOrderAndWait(it, buyOrder, sellType) }
-      }.doOnNext { logger.info("코인 현재가 매도가 완료되었습니다.") }
-  }
-
-
-  // TODO: Phase 에 따라 함수 최적화 필요
   private fun logCurrentStatus(tradeStatus: TradeStatus, currentPrice: Double, profitPrice: Double? = null, lossPrice: Double? = null, logger: Logger) {
     LocalDateTime.now()
       .takeIf { it.second < this.watchIntervalSecond }
