@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
+import java.lang.IllegalStateException
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -115,7 +116,7 @@ class WorkerService(
                   }
                 }.repeatWhenEmpty(((this.phase.phase1.waitMinute * 60 / this.watchIntervalSecond) + 1).toInt()) {
                   it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
-                }.switchIfEmpty {
+                }.onErrorResume(IllegalStateException::class.java) {
                   this.client.order.cancelOrder(OrderRequest(profitOrder.uuid))
                     .flatMap { this.repository.cancelSellOrder(profitOrder.uuid, tradeStatus.buy.order.uuid) }
                     .thenReturn(tradeStatus)
@@ -149,7 +150,7 @@ class WorkerService(
         }
       }.repeatWhenEmpty(((this.phase.phase2.waitMinute * 60 / this.watchIntervalSecond) + 1).toInt()) {
         it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
-      }.switchIfEmpty {
+      }.onErrorResume(IllegalStateException::class.java) {
         logger.info("${(this.phase.totalWaitMinute().toDouble() / 60.0).toStrWithPoint(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 판매합니다.")
         this.client.orderBook.getOrderBook(Markets.fromMarket(tradeStatus.buy.order.market)).next()
           .flatMap { orderbook ->
