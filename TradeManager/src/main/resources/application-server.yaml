@@ -16,9 +16,13 @@ spring:
 custom:
   trade:
     sell:
-      profit-percent: ${WORKER_PROFIT_PERCENT:1}
-      loss-percent: ${WORKER_LOSS_PERCENT:2}
-      wait-hour: ${WORKER_WAIT_HOUR:3}
+      phase1:
+        wait-minute: ${PHASE_1_WAIT_MINUTE:150}
+        profit-percent: ${PHASE_1_PROFIT_PERCENT:1.5}
+        loss-percent: ${PHASE_1_LOSS_PERCENT:3.0}
+      phase2:
+        wait-minute: ${PHASE_2_WAIT_MINUTE:90}
+        loss-percent: ${PHASE_2_LOSS_PERCENT:2.0}
   upbit:
     access-key: ${UPBIT_ACCESS_KEY:access-key}
     secret-key: ${UPBIT_SECRET_KEY:secret-key}

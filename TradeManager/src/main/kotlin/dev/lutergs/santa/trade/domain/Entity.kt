@@ -9,9 +9,19 @@ data class KubernetesInfo (
 )
 
 data class WorkerConfig (
+  val phase1: Phase1,
+  val phase2: Phase2
+)
+
+data class Phase1(
+  val waitMinute: Long,
   val profitPercent: Double,
-  val lossPercent: Double,
-  val waitHour: Long
+  val lossPercent: Double
+)
+
+data class Phase2(
+  val waitMinute: Long,
+  val lossPercent: Double
 )
 
 data class Message (

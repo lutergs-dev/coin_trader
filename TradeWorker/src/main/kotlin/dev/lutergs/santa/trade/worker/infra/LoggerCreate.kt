@@ -12,6 +12,11 @@ object LoggerCreate {
     return LoggerFactory.getLogger("[${this.appName}][$className]")
   }
 
+  fun<T : Any> createLogger(clazz: KClass<T>, vararg optionalNames: String): Logger {
+    return optionalNames.joinToString(separator = "") { "[${it}]" }
+      .let { LoggerFactory.getLogger("[${this.appName}][${clazz.simpleName}]${it}") }
+  }
+
   fun<T : Any> createLogger(clazz: KClass<T>): Logger {
     return LoggerFactory.getLogger("[${this.appName}][${clazz.simpleName}]")
   }
