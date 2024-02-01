@@ -75,12 +75,24 @@ data class Phase1(
   val waitMinute: Long,
   val profitPercent: Double,
   val lossPercent: Double
-)
+) {
+  fun getProfitPrice(price: Double): Double {
+    return price * (1.0 + (profitPercent * 0.01))
+  }
+
+  fun getLossPrice(price: Double): Double {
+    return price * (1.0 - (lossPercent * 0.01))
+  }
+}
 
 data class Phase2(
   val waitMinute: Long,
   val lossPercent: Double
-)
+) {
+  fun getLossPrice(price: Double): Double {
+    return price * (1.0 - (lossPercent * 0.01))
+  }
+}
 
 
 data class TradeStatus(

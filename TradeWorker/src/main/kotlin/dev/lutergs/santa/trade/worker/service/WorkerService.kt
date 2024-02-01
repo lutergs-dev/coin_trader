@@ -83,10 +83,10 @@ class WorkerService(
       .next()
       .flatMap {orderbook ->
         val profitPrice = orderbook.orderbookUnits
-          .filter { it.askPrice < tradeStatus.buy.order.price * this.phase.phase1.profitPercent }
+          .filter { it.askPrice < this.phase.phase1.getProfitPrice(tradeStatus.buy.order.price) }
           .maxOf { it.askPrice }
         val lossPrice = orderbook.orderbookUnits
-          .filter { it.bidPrice > tradeStatus.buy.order.price * this.phase.phase1.lossPercent }
+          .filter { it.bidPrice > this.phase.phase1.getLossPrice(tradeStatus.buy.order.price) }
           .minOf { it.bidPrice }
         PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.volume, profitPrice)
           .also { logger.info("코인의 이득점을 설정했습니다. 가격 : ${it.price}, 총금액 : ${it.volume!! * it.price!!}. 앞으로 2시간 반동안, 코인의 가격이 $profitPrice (이득점) 혹은 $lossPrice (손실점) 에 도달하면 판매합니다.") }
@@ -110,7 +110,7 @@ class WorkerService(
                     this.repository.finishSellOrder(tradeStatus.buy.order, firstSellOrder, SellType.PROFIT)
                       .thenReturn(tradeStatus.sellFinished(firstSellOrder, SellType.PROFIT))
                   } else if (currentPrice <= lossPrice) {
-                    logger.info("코인이 ${((1.0 - this.phase.phase1.lossPercent) * 100.0).toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
+                    logger.info("코인이 ${this.phase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
                     this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, tradeStatus.buy.order, SellType.LOSS, logger)
                       .flatMap { orderResponse ->
                         this.alarmSender.sendAlarm(AlarmMessage(AlarmMessageKey(orderResponse.market.quote), AlarmMessageValue(orderResponse.uuid)))
@@ -146,8 +146,8 @@ class WorkerService(
           PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.volume, currentPrice)
             .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.STOP_PROFIT) }
             .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.STOP_PROFIT) } }
-        } else if (currentPrice <= tradeStatus.buy.order.price * this.phase.phase2.lossPercent) {
-          logger.info("코인이 ${((1.0 - this.phase.phase2.lossPercent) * 100.0).toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
+        } else if (currentPrice <= this.phase.phase2.getLossPrice(tradeStatus.buy.order.price)) {
+          logger.info("코인이 ${this.phase.phase2.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
           PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.volume, currentPrice)
             .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.STOP_LOSS) }
             .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.STOP_LOSS) } }
@@ -175,7 +175,7 @@ class WorkerService(
       .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, buyOrder.uuid).thenReturn(it) }
       .flatMap { this.client.orderBook.getOrderBook(Markets.fromMarket(it.market)).next() }
       .flatMap { res ->
-        logger.info("[Phase1] 코인 매도 주문을 취소했습니다. 현재 가격인 ${res.orderbookUnits.first().bidPrice} 에 매도합니다.")
+        logger.info("코인 매도 주문을 취소했습니다. 현재 가격인 ${res.orderbookUnits.first().bidPrice} 에 매도합니다.")
         PlaceOrderRequest(
           market = res.market,
           type = OrderType.LIMIT,
@@ -199,9 +199,9 @@ class WorkerService(
             val secs = d.seconds % 60
 
             if (profitPrice != null && lossPrice != null) {
-              logger.info("[Phase1] 이득가: ${profitPrice.toStrWithPoint()}, 손실가: ${lossPrice.toStrWithPoint()}, 현재가: ${currentPrice.toStrWithPoint()}, 구매가: ${tradeStatus.buy.order.price.toStrWithPoint()} 경과시간: $hours 시간 $minutes 분 $secs 초")
+              logger.info("이득가: ${profitPrice.toStrWithPoint()}, 손실가: ${lossPrice.toStrWithPoint()}, 현재가: ${currentPrice.toStrWithPoint()}, 구매가: ${tradeStatus.buy.order.price.toStrWithPoint()} 경과시간: $hours 시간 $minutes 분 $secs 초")
             } else {
-              logger.info("[Phase2] 현재가: ${currentPrice.toStrWithPoint()}, 구매가: ${tradeStatus.buy.order.price.toStrWithPoint()}, 경과시간: $hours 시간 $minutes 분 $secs 초\"")
+              logger.info("현재가: ${currentPrice.toStrWithPoint()}, 구매가: ${tradeStatus.buy.order.price.toStrWithPoint()}, 경과시간: $hours 시간 $minutes 분 $secs 초\"")
             }
           }
       }
