@@ -126,7 +126,7 @@ data class TradeStatus(
 
   fun getEarnPrice(): Double {
     return if (sell != null) {
-      (this.sell.order.price * this.sell.order.volume) - (this.buy.order.price * this.buy.order.volume) - ((listOf(this.sell.order.paidFee, this.sell.order.reservedFee, this.sell.order.remainingFee).maxOrNull() ?: 0.0) + this.buy.order.paidFee)
+      (this.sell.order.price * this.sell.order.getTotalVolume()) - (this.buy.order.price * this.buy.order.getTotalVolume()) - ((listOf(this.sell.order.paidFee, this.sell.order.reservedFee, this.sell.order.remainingFee).maxOrNull() ?: 0.0) + this.buy.order.paidFee)
     } else {
       0.0
     }

@@ -45,7 +45,7 @@ data class OrderResponse(
   @JsonSerialize(using = OffsetDateTimeSerializer::class)
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime,
-  @JsonProperty("volume") val volume: Double,
+  @JsonProperty("volume") val volume: Double? = null,
   @JsonProperty("remaining_volume") val remainingVolume: Double,
   @JsonProperty("reserved_fee") val reservedFee: Double,
   @JsonProperty("remaining_fee") val remainingFee: Double,
@@ -56,6 +56,10 @@ data class OrderResponse(
   @JsonProperty("trades") val trades: List<OrderTrade>
 ) {
   fun isFinished() = this.state == "done"
+
+  fun getTotalVolume(): Double {
+    return this.executedVolume + this.remainingVolume
+  }
 }
 
 /**

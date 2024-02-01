@@ -60,11 +60,14 @@ class WorkerService(
     return this.client.order.placeOrder(PlaceOrderRequest(this.mainTrade.market, OrderType.PRICE, OrderSide.BID, price = this.mainTrade.money.toDouble()))
       .flatMap { placeOrderResponse ->
         this.client.order.getOrder(OrderRequest(uuid = placeOrderResponse.uuid))
-          .flatMap { if (it.state == "done") Mono.fromCallable { it } else Mono.empty() }
+          .flatMap { if (it.isFinished()) Mono.fromCallable { it } else Mono.empty() }
           .repeatWhenEmpty(30 * 10) {
             it.delayElements(Duration.ofSeconds(2))
           }.flatMap { this.repository.newBuyOrder(it) }
-          .flatMap { Mono.fromCallable { TradeStatus(buy = Order(it, OrderStatus.COMPLETE), sell = null, sellType = null) } }
+          .doOnNext {
+            this.originLogger.info("코인 구매가 완료되었습니다. 대상 코인 : ${it.market}, 가격: ${it.price.toStrWithPoint(3)}, 구매량: ${it.getTotalVolume().toStrWithPoint(3)}, 총금액: ${this.mainTrade.money.toDouble()}")
+            this.originLogger.info("구매 주문 UUID: ${it.uuid}")
+          }.flatMap { Mono.fromCallable { TradeStatus(buy = Order(it, OrderStatus.COMPLETE), sell = null, sellType = null) } }
       }
   }
 
@@ -107,8 +110,9 @@ class WorkerService(
                     this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
                       .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, tradeStatus.buy.order.uuid).thenReturn(it) }
                       .doOnNext { logger.info("코인 매도 주문을 취소했습니다. 현재 가격으로 매도합니다.") }
-                      .flatMap { this.client.placeSellOrderAndWait(PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = firstSellOrder.volume), tradeStatus.buy.order, SellType.LOSS) }
-                      .doOnNext { logger.info("코인 현재가 매도가 완료되었습니다.") }
+                      .flatMap { PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = firstSellOrder.volume)
+                        .let {p -> this.client.placeSellOrderAndWait(p, tradeStatus.buy.order, SellType.LOSS) }
+                      }.doOnNext { logger.info("코인 현재가 매도가 완료되었습니다.") }
                       .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.LOSS) } }
                   } else {
                     Mono.empty()

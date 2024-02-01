@@ -93,7 +93,7 @@ class LogRepositoryImpl(
         this.buyPrice = response.price
         this.buyFee = response.reservedFee
         this.buyVolume = response.volume
-        this.buyWon = response.price * response.volume - response.reservedFee
+        this.buyWon = response.price * response.getTotalVolume() - response.reservedFee
         this.buyPlaceAt = response.createdAt
         this.setNewInstance()
       }.let { this.retrySave(it).thenReturn(response) }
@@ -114,7 +114,7 @@ class LogRepositoryImpl(
         it.sellPrice = response.price
         it.sellVolume = response.volume
         it.sellFee = listOf(response.paidFee, response.reservedFee, response.remainingFee).maxOrNull()!!
-        it.sellWon = response.price * response.volume - it.sellFee!!
+        it.sellWon = response.price * response.getTotalVolume() - it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.retrySave(it)
       }.thenReturn(response)
@@ -126,7 +126,7 @@ class LogRepositoryImpl(
         if (it.sellId != sellResponse.uuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
         else {
           it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
-          it.profit = (sellResponse.price * sellResponse.volume) - (buyResponse.price * buyResponse.volume) - (buyResponse.paidFee + sellResponse.paidFee)
+          it.profit = (sellResponse.price * sellResponse.getTotalVolume()) - (buyResponse.price * buyResponse.getTotalVolume()) - (buyResponse.paidFee + sellResponse.paidFee)
           it.sellType = sellType.name
           it.sellFee = listOf(sellResponse.paidFee, sellResponse.reservedFee, sellResponse.remainingFee).maxOrNull()!!
           this.retrySave(it).thenReturn(sellResponse)
