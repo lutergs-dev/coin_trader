@@ -112,11 +112,7 @@ class WorkerService(
                   } else if (currentPrice <= lossPrice) {
                     logger.info("코인이 ${this.phase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
                     this.cancelSellOrderAndSellByCurrentPrice(firstSellOrder, tradeStatus.buy.order, SellType.LOSS, logger)
-                      .flatMap { orderResponse ->
-                        this.alarmSender.sendAlarm(AlarmMessage(AlarmMessageKey(orderResponse.market.quote), AlarmMessageValue(orderResponse.uuid)))
-                          .thenReturn(orderResponse)
-                          .doOnNext { logger.info("손실 매도한 코인 (${this.mainTrade.market.quote}) 에 대한 정보를 controller 로 전송했습니다.") }
-                      }.flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.LOSS) } }
+                      .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.LOSS) } }
                   } else {
                     Mono.empty()
                   }
