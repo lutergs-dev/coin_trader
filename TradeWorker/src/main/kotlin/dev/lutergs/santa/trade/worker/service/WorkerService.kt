@@ -72,15 +72,11 @@ class WorkerService(
   fun phase1(tradeStatus: TradeStatus, logger: Logger = this.p1Logger): Mono<TradeStatus> {
     return this.client.orderBook.getOrderBook(Markets.fromMarket(tradeStatus.buy.order.market))
       .next()
-      .flatMap {orderbook ->
-        val profitPrice = orderbook.orderbookUnits
-          .filter { it.askPrice < this.phase.phase1.getProfitPrice(tradeStatus.buy.order.avgPrice) }
-          .maxOf { it.askPrice }
-        val lossPrice = orderbook.orderbookUnits
-          .filter { it.bidPrice > this.phase.phase1.getLossPrice(tradeStatus.buy.order.avgPrice) }
-          .minOf { it.bidPrice }
+      .flatMap { orderbook ->
+        val profitPrice = this.phase.phase1.getProfitPrice(tradeStatus.buy.order.avgPrice).let { orderbook.nearestStepPrice(it) }
+        val lossPrice = this.phase.phase1.getLossPrice(tradeStatus.buy.order.avgPrice)
         PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.totalVolume, profitPrice)
-          .also { logger.info("코인의 이득점을 설정했습니다. 가격 : ${it.price?.toStrWithPoint()}, 총금액 : ${(it.volume!! * it.price!!).toStrWithPoint()}. 앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithPoint()} (이득점) 혹은 ${lossPrice.toStrWithPoint()} (손실점) 에 도달하면 판매합니다.") }
+          .also { logger.info("코인의 이득점을 설정했습니다. 가격 : ${it.price?.toStrWithPoint()}, 총금액 : ${(it.volume!! * it.price!!).toStrWithPoint()}. 앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithPoint()} (이득주문점) 혹은 ${lossPrice.toStrWithPoint()} (손실점) 에 도달하면 판매합니다.") }
           .let { request ->
             this.client.order.placeOrder(request)
               .doOnNext { logger.info("코인의 이득 판매 주문을 올렸습니다.") }
@@ -113,7 +109,7 @@ class WorkerService(
                   } else {
                     Mono.empty()
                   }
-                }.repeatWhenEmpty(((this.phase.phase1.waitMinute * 60 / this.watchIntervalSecond) + 1).toInt()) {
+                }.repeatWhenEmpty((this.phase.phase1.waitMinute * 60 / this.watchIntervalSecond).toInt()) {
                   it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
                 }.onErrorResume(IllegalStateException::class.java) {
                   logger.info("코인이 판매점에 도달하지 못했습니다. 현재 매도 주문을 취소하고, phase 2 로 진입합니다.")
@@ -152,7 +148,7 @@ class WorkerService(
         } else {
           Mono.empty()
         }
-      }.repeatWhenEmpty(((this.phase.phase2.waitMinute * 60 / this.watchIntervalSecond) + 1).toInt()) {
+      }.repeatWhenEmpty((this.phase.phase2.waitMinute * 60 / this.watchIntervalSecond).toInt()) {
         it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
       }.onErrorResume(IllegalStateException::class.java) {
         logger.info("${(this.phase.totalWaitMinute().toDouble() / 60.0).toStrWithPoint(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")

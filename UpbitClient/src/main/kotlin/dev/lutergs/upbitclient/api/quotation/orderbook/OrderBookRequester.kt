@@ -9,6 +9,10 @@ import dev.lutergs.upbitclient.dto.MarketCodeDeserializer
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
+import kotlin.math.absoluteValue
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 class OrderBookRequester(requester: Requester) : RequestDao(requester) {
 
@@ -32,12 +36,28 @@ class OrderBookRequester(requester: Requester) : RequestDao(requester) {
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderBookResponse(
   @JsonDeserialize(using = MarketCodeDeserializer::class)
-    @JsonProperty("market")           val market: MarketCode,
+  @JsonProperty("market")           val market: MarketCode,
   @JsonProperty("timestamp")        val timestamp: Long,
   @JsonProperty("total_ask_size")   val totalAskSize: Double,
   @JsonProperty("total_bid_size")   val totalBidSize: Double,
   @JsonProperty("orderbook_units")  val orderbookUnits: List<OrderBookUnit>
-)
+) {
+  private val step = orderbookUnits.windowed(2, 1, false) {
+    min((it[0].bidPrice - it[1].bidPrice).absoluteValue, it[0].askPrice - it[1].askPrice)
+  }.minOrNull()
+    ?: throw IllegalStateException("호가 리스트가 존재하지 않습니다!")
+
+  fun nearestStepPrice(price: Double): Double {
+    val stepString = this.step.toString()
+    return if (stepString.contains(".")) {
+      val stepLength = this.step.toString().substringAfter(".").length
+      val origin = (price * this.step) / this.step
+      (origin * (10.0.pow(stepLength))).roundToInt().toDouble() / (10.0.pow(stepLength))
+    } else {
+      (price * this.step).roundToInt().toDouble() / this.step
+    }
+  }
+}
 
 /**
  * 개별 호가 단위를 나타내는 데이터 클래스
