@@ -49,7 +49,7 @@ data class OrderBookResponse(
 
   fun nearestStepPrice(price: Double): Double {
     val stepString = this.step.toString()
-    return if (stepString.split(".")[1].toLong() == 0L) {
+    return if (stepString.split(".")[1].toLong() != 0L) {
       val stepLength = this.step.toString().substringAfter(".").length
       val origin = (price * this.step) / this.step
       (origin * (10.0.pow(stepLength))).roundToInt().toDouble() / (10.0.pow(stepLength))
