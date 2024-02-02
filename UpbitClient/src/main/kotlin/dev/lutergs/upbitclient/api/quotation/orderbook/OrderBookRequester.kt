@@ -43,7 +43,7 @@ data class OrderBookResponse(
   @JsonProperty("orderbook_units")  val orderbookUnits: List<OrderBookUnit>
 ) {
   private val step = orderbookUnits.windowed(2, 1, false) {
-    min((it[0].bidPrice - it[1].bidPrice).absoluteValue, it[0].askPrice - it[1].askPrice)
+    min((it[0].bidPrice - it[1].bidPrice).absoluteValue, (it[0].askPrice - it[1].askPrice).absoluteValue)
   }.minOrNull()
     ?: throw IllegalStateException("호가 리스트가 존재하지 않습니다!")
 
@@ -54,7 +54,7 @@ data class OrderBookResponse(
       val origin = (price * this.step) / this.step
       (origin * (10.0.pow(stepLength))).roundToInt().toDouble() / (10.0.pow(stepLength))
     } else {
-      (price * this.step).roundToInt().toDouble() / this.step
+      ((price * this.step) / this.step).roundToInt().toDouble()
     }
   }
 }
