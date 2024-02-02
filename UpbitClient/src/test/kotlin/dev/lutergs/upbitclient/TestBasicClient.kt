@@ -202,10 +202,10 @@ class TestBasicClient {
         this.basicClient.order.getOrder(OrderRequest(UUID.fromString(uuid)))
           .doOnNext {
             println("real order is $it")
-            println("additional : ${it.isFinished}, ${it.totalVolume}, ${it.avgPrice}")
+            println("additional : ${it.isFinished()}, ${it.totalVolume()}, ${it.avgPrice()}")
           }
       }.flatMap {
-        PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = it.totalVolume)
+        PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = it.totalVolume())
           .let { p -> this.basicClient.order.testPlaceOrder(p) }
       }.flatMap {
         println("first market sell order result : $it")
@@ -224,7 +224,7 @@ class TestBasicClient {
         this.basicClient.order.getOrder(OrderRequest(UUID.fromString(uuid)))
           .doOnNext {
             println("real order is $it")
-            println("additional : ${it.isFinished}, ${it.totalVolume}, ${it.avgPrice}")
+            println("additional : ${it.isFinished()}, ${it.totalVolume()}, ${it.avgPrice()}")
           }
       }.block()
   }

@@ -67,7 +67,7 @@ class UpbitClient(
   private fun waitOrderUntilComplete(uuid: UUID): Mono<OrderResponse> {
     return Mono.defer { this.order.getOrder(OrderRequest(uuid)) }
       .flatMap { 
-        if (it.isFinished) {
+        if (it.isFinished()) {
           Mono.just(it)
         } else {
           Mono.empty()

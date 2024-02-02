@@ -90,10 +90,10 @@ class LogRepositoryImpl(
       .apply {
         this.coin = response.market.quote
         this.buyId = response.uuid.toString()
-        this.buyPrice = response.avgPrice
+        this.buyPrice = response.avgPrice()
         this.buyFee = response.reservedFee
-        this.buyVolume = response.totalVolume
-        this.buyWon = response.avgPrice * response.totalVolume - response.reservedFee
+        this.buyVolume = response.totalVolume()
+        this.buyWon = response.avgPrice() * response.totalVolume() - response.reservedFee
         this.buyPlaceAt = response.createdAt
         this.setNewInstance()
       }.let { this.retrySave(it).thenReturn(response) }
@@ -113,10 +113,10 @@ class LogRepositoryImpl(
       .apply {
         this.coin = response.market.quote
         this.buyId = response.uuid.toString()
-        this.buyPrice = response.avgPrice
+        this.buyPrice = response.avgPrice()
         this.buyFee = response.reservedFee
-        this.buyVolume = response.totalVolume
-        this.buyWon = response.avgPrice * response.totalVolume - response.reservedFee
+        this.buyVolume = response.totalVolume()
+        this.buyWon = response.avgPrice() * response.totalVolume() - response.reservedFee
         this.buyPlaceAt = response.createdAt
         this.buyFinishAt = response.trades.maxOf { d -> d.createdAt }
         this.setNewInstance()
@@ -127,10 +127,10 @@ class LogRepositoryImpl(
     return this.retryFindById(buyUuid.toString())
       .flatMap {
         it.sellId = response.uuid.toString()
-        it.sellPrice = response.avgPrice
-        it.sellVolume = response.totalVolume
+        it.sellPrice = response.avgPrice()
+        it.sellVolume = response.totalVolume()
         it.sellFee = response.paidFee
-        it.sellWon = response.avgPrice * response.totalVolume - it.sellFee!!
+        it.sellWon = response.avgPrice() * response.totalVolume() - it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.retrySave(it)
       }.thenReturn(response)
@@ -142,7 +142,7 @@ class LogRepositoryImpl(
         if (it.sellId != sellResponse.uuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
         else {
           it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
-          it.profit = (sellResponse.avgPrice * sellResponse.totalVolume) - (buyResponse.avgPrice * buyResponse.totalVolume) - (buyResponse.paidFee + sellResponse.paidFee)
+          it.profit = (sellResponse.avgPrice() * sellResponse.totalVolume()) - (buyResponse.avgPrice() * buyResponse.totalVolume()) - (buyResponse.paidFee + sellResponse.paidFee)
           it.sellType = sellType.name
           it.sellFee = sellResponse.paidFee
           this.retrySave(it).thenReturn(sellResponse)
@@ -153,15 +153,15 @@ class LogRepositoryImpl(
   // 시장가로 거래할 때 사용
   override fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
     return this.retryFindById(buyResponse.uuid.toString())
-      .flatMap { it ->
+      .flatMap {
         it.sellId = sellResponse.uuid.toString()
-        it.sellPrice = sellResponse.avgPrice
-        it.sellVolume = sellResponse.totalVolume
+        it.sellPrice = sellResponse.avgPrice()
+        it.sellVolume = sellResponse.totalVolume()
         it.sellFee = sellResponse.paidFee
-        it.sellWon = sellResponse.avgPrice * sellResponse.totalVolume - it.sellFee!!
+        it.sellWon = sellResponse.avgPrice() * sellResponse.totalVolume() - it.sellFee!!
         it.sellPlaceAt = sellResponse.createdAt
         it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
-        it.profit = (sellResponse.avgPrice * sellResponse.totalVolume) - (buyResponse.avgPrice * buyResponse.totalVolume) - (buyResponse.paidFee + sellResponse.paidFee)
+        it.profit = (sellResponse.avgPrice() * sellResponse.totalVolume()) - (buyResponse.avgPrice() * buyResponse.totalVolume()) - (buyResponse.paidFee + sellResponse.paidFee)
         it.sellType = sellType.name
         it.sellFee = sellResponse.paidFee
         this.retrySave(it).thenReturn(sellResponse)
