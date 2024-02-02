@@ -29,6 +29,16 @@ class OrderRequester(requester: Requester) : RequestDao(requester) {
   fun placeOrder(request: PlaceOrderRequest): Mono<PlaceOrderResponse> {
     return this.requester.postSingle("/orders", request, PlaceOrderResponse::class)
   }
+
+  @Deprecated("테스트 용 함수이므로, 사용 금지", ReplaceWith("this.getOrder(request)"))
+  fun testGetOrder(request: OrderRequest): Mono<String> {
+    return this.requester.getSingleTest("/order", request)
+  }
+
+  @Deprecated("테스트 용 함수이므로, 사용 금지", ReplaceWith("this.placeOrder(request)"))
+  fun testPlaceOrder(request: PlaceOrderRequest): Mono<String> {
+    return this.requester.postTest("/orders", request)
+  }
 }
 
 

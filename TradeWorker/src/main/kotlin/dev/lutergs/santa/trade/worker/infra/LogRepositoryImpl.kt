@@ -107,13 +107,29 @@ class LogRepositoryImpl(
       }.thenReturn(response)
   }
 
-  override fun newSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse> {
+  // 시장가로 거래할 때 사용
+  override fun completeBuyOrder(response: OrderResponse): Mono<OrderResponse> {
+    return OrderEntity()
+      .apply {
+        this.coin = response.market.quote
+        this.buyId = response.uuid.toString()
+        this.buyPrice = response.avgPrice
+        this.buyFee = response.reservedFee
+        this.buyVolume = response.totalVolume
+        this.buyWon = response.avgPrice * response.totalVolume - response.reservedFee
+        this.buyPlaceAt = response.createdAt
+        this.buyFinishAt = response.trades.maxOf { d -> d.createdAt }
+        this.setNewInstance()
+      }.let { this.retrySave(it).thenReturn(response) }
+  }
+
+  override fun placeSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse> {
     return this.retryFindById(buyUuid.toString())
       .flatMap {
         it.sellId = response.uuid.toString()
         it.sellPrice = response.avgPrice
         it.sellVolume = response.totalVolume
-        it.sellFee = listOf(response.paidFee, response.reservedFee, response.remainingFee).maxOrNull()!!
+        it.sellFee = response.paidFee
         it.sellWon = response.avgPrice * response.totalVolume - it.sellFee!!
         it.sellPlaceAt = response.createdAt
         this.retrySave(it)
@@ -128,9 +144,27 @@ class LogRepositoryImpl(
           it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
           it.profit = (sellResponse.avgPrice * sellResponse.totalVolume) - (buyResponse.avgPrice * buyResponse.totalVolume) - (buyResponse.paidFee + sellResponse.paidFee)
           it.sellType = sellType.name
-          it.sellFee = listOf(sellResponse.paidFee, sellResponse.reservedFee, sellResponse.remainingFee).maxOrNull()!!
+          it.sellFee = sellResponse.paidFee
           this.retrySave(it).thenReturn(sellResponse)
         }
+      }
+  }
+
+  // 시장가로 거래할 때 사용
+  override fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
+    return this.retryFindById(buyResponse.uuid.toString())
+      .flatMap { it ->
+        it.sellId = sellResponse.uuid.toString()
+        it.sellPrice = sellResponse.avgPrice
+        it.sellVolume = sellResponse.totalVolume
+        it.sellFee = sellResponse.paidFee
+        it.sellWon = sellResponse.avgPrice * sellResponse.totalVolume - it.sellFee!!
+        it.sellPlaceAt = sellResponse.createdAt
+        it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
+        it.profit = (sellResponse.avgPrice * sellResponse.totalVolume) - (buyResponse.avgPrice * buyResponse.totalVolume) - (buyResponse.paidFee + sellResponse.paidFee)
+        it.sellType = sellType.name
+        it.sellFee = sellResponse.paidFee
+        this.retrySave(it).thenReturn(sellResponse)
       }
   }
 

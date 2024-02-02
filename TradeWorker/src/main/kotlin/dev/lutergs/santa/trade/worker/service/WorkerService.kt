@@ -19,7 +19,6 @@ import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
-import reactor.kotlin.core.publisher.switchIfEmpty
 import java.lang.IllegalStateException
 import java.time.Duration
 import java.time.LocalDateTime
@@ -41,7 +40,7 @@ class WorkerService(
   @PostConstruct
   fun run() {
     this.buyCoin()
-      .flatMap { buyOrder -> this.phase1(buyOrder, p1Logger) }
+      .flatMap { buyOrder -> this.phase1(buyOrder) }
       .flatMap {
         if (it.sell != null && it.sellType != null && it.sellType == SellType.LOSS) {
           this.alarmSender.sendAlarm(AlarmMessage.fromOrderResponse(it.sell.order))
@@ -51,7 +50,7 @@ class WorkerService(
           Mono.just(it)
         }
       }.flatMap {
-        if (it.sell == null) { this.phase2(it, p2Logger) }
+        if (it.sell == null) { this.phase2(it) }
         else { Mono.just(it) }
       }.flatMap { this.alarmSender.sendTradeResult(TradeResult.fromTradeStatus(it)) }
       .subscribe { this.closeApplication() }
@@ -70,7 +69,7 @@ class WorkerService(
   /**
    * 최초 정해진 시각 동안은, 코인을 구매하고 1차 이득점, 손실점을 설정한 후 해당 지점에 도달했을 때만 판매한다.
    * */
-  fun phase1(tradeStatus: TradeStatus, logger: Logger): Mono<TradeStatus> {
+  fun phase1(tradeStatus: TradeStatus, logger: Logger = this.p1Logger): Mono<TradeStatus> {
     return this.client.orderBook.getOrderBook(Markets.fromMarket(tradeStatus.buy.order.market))
       .next()
       .flatMap {orderbook ->
@@ -86,7 +85,7 @@ class WorkerService(
             this.client.order.placeOrder(request)
               .doOnNext { logger.info("코인의 이득 판매 주문을 올렸습니다.") }
               .flatMap { this.client.order.getOrder(OrderRequest(it.uuid)) }
-              .flatMap { this.repository.newSellOrder(it, tradeStatus.buy.order.uuid).thenReturn(it) }
+              .flatMap { this.repository.placeSellOrder(it, tradeStatus.buy.order.uuid).thenReturn(it) }
               .flatMap { profitOrder ->
                 // 1초에 한 번씩 가격과 오더 상태를 같이 확인함
                 Mono.zip(
@@ -103,7 +102,7 @@ class WorkerService(
                     this.repository.finishSellOrder(tradeStatus.buy.order, firstSellOrder, SellType.PROFIT)
                       .thenReturn(tradeStatus.sellFinished(firstSellOrder, SellType.PROFIT))
                   } else if (currentPrice <= lossPrice) {
-                    logger.info("코인이 ${this.phase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
+                    logger.info("코인이 ${this.phase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
                     this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
                       .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, tradeStatus.buy.order.uuid).thenReturn(it) }
                       .doOnNext { logger.info("코인 매도 주문을 취소했습니다. 현재 가격으로 매도합니다.") }
@@ -117,9 +116,11 @@ class WorkerService(
                 }.repeatWhenEmpty(((this.phase.phase1.waitMinute * 60 / this.watchIntervalSecond) + 1).toInt()) {
                   it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
                 }.onErrorResume(IllegalStateException::class.java) {
+                  logger.info("코인이 판매점에 도달하지 못했습니다. 현재 매도 주문을 취소하고, phase 2 로 진입합니다.")
                   this.client.order.cancelOrder(OrderRequest(profitOrder.uuid))
                     .flatMap { this.repository.cancelSellOrder(profitOrder.uuid, tradeStatus.buy.order.uuid) }
                     .thenReturn(tradeStatus)
+                    .doOnNext { logger.info("코인의 매도 주문을 취소했습니다.") }
                 }
               }
           }
@@ -129,34 +130,38 @@ class WorkerService(
   /**
    * 한시간 반 동안, 구매 가격보다 높으면 무조건 매매
    * */
-  fun phase2(tradeStatus: TradeStatus, logger: Logger): Mono<TradeStatus> {
+  fun phase2(tradeStatus: TradeStatus, logger: Logger = this.p2Logger): Mono<TradeStatus> {
+    logger.info("지금부터 코인의 평균 구매단가보다 현재 가격이 높거나, 지정한 손실점 이하로 가격이 떨어지면 매도합니다.")
     return Mono.defer { this.client.ticker.getTicker(Markets.fromMarket(tradeStatus.buy.order.market)).next() }
       .flatMap { ticker ->
         val currentPrice = ticker.tradePrice
-
         this.logCurrentStatus(tradeStatus, currentPrice, logger = logger)
 
         if (currentPrice > tradeStatus.buy.order.avgPrice) {
+          logger.info("코인이 평균 구매단가보다 높습니다. 현재 가격으로 매도합니다.")
           PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.MARKET, OrderSide.ASK, volume = tradeStatus.buy.order.totalVolume)
             .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.STOP_PROFIT) }
             .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.STOP_PROFIT) } }
+            .doOnNext { logger.info("이익 매도가 완료되었습니다.") }
         } else if (currentPrice <= this.phase.phase2.getLossPrice(tradeStatus.buy.order.avgPrice)) {
-          logger.info("코인이 ${this.phase.phase2.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매매합니다.")
+          logger.info("코인이 ${this.phase.phase2.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
           PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.MARKET, OrderSide.ASK, volume = tradeStatus.buy.order.totalVolume)
             .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.STOP_LOSS) }
             .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.STOP_LOSS) } }
+            .doOnNext { logger.info("손실 매도가 완료되었습니다.") }
         } else {
           Mono.empty()
         }
       }.repeatWhenEmpty(((this.phase.phase2.waitMinute * 60 / this.watchIntervalSecond) + 1).toInt()) {
         it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
       }.onErrorResume(IllegalStateException::class.java) {
-        logger.info("${(this.phase.totalWaitMinute().toDouble() / 60.0).toStrWithPoint(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 판매합니다.")
+        logger.info("${(this.phase.totalWaitMinute().toDouble() / 60.0).toStrWithPoint(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
         this.client.orderBook.getOrderBook(Markets.fromMarket(tradeStatus.buy.order.market)).next()
           .flatMap { orderbook ->
             PlaceOrderRequest(tradeStatus.buy.order.market, OrderType.LIMIT, OrderSide.ASK, tradeStatus.buy.order.totalVolume, orderbook.orderbookUnits.first().bidPrice)
               .let { this.client.placeSellOrderAndWait(it, tradeStatus.buy.order, SellType.TIMEOUT) }
               .flatMap { Mono.fromCallable { tradeStatus.sellFinished(it, SellType.TIMEOUT) } }
+              .doOnNext { logger.info("시간초과 ${if(it.sell!!.order.avgPrice > it.buy.order.avgPrice ) "이익" else "손실"} 매도가 완료되었습니다.") }
           }
       }
   }

@@ -4,22 +4,24 @@ import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
 import dev.lutergs.upbitclient.api.exchange.order.OrdersRequest
 import dev.lutergs.upbitclient.api.exchange.order.PlaceOrderRequest
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteRequest
-import dev.lutergs.upbitclient.dto.Markets
-import dev.lutergs.upbitclient.dto.OrderSide
-import dev.lutergs.upbitclient.dto.OrderState
-import dev.lutergs.upbitclient.dto.OrderType
+import dev.lutergs.upbitclient.dto.*
 import dev.lutergs.upbitclient.webclient.BasicClient
+import org.json.JSONObject
 import org.junit.jupiter.api.Test
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
+import java.util.*
 import kotlin.math.roundToInt
 
 class TestBasicClient {
 
-  private val basicClient = BasicClient("a", "b")
+  private val basicClient = BasicClient(
+    "a",
+    "b"
+  )
 
   @Test
   fun `전체 계좌 조회 테스트`() {
@@ -178,8 +180,52 @@ class TestBasicClient {
       .block()
   }
 
-//  @Test
-//  fun `주문목록 조회 테스트`() {
-//    this.basicClient.order.getOrders()
-//  }
+  @Test
+  fun `시장가 매수 매도 DTO 출력 테스트`() {
+    PlaceOrderRequest(MarketCode("KRW", "BTC"), OrderType.PRICE, OrderSide.BID, price = 10000.0)
+      .let { this.basicClient.order.testPlaceOrder(it) }
+      .flatMap {
+        println("first price buy order result : $it")
+        val uuid = JSONObject(it).getString("uuid")
+        Mono.just(uuid)
+      }.flatMap { uuid ->
+        Mono.defer { this.basicClient.order.testGetOrder(OrderRequest(UUID.fromString(uuid))) }
+          .delayElement(Duration.ofMillis(80))
+          .repeat(10)
+          .flatMap {
+            println("[Price] Order result is: $it")
+            Mono.just(it)
+          }.collectList()
+      }.flatMap { list -> Mono.just(list.first()) }
+      .flatMap { order ->
+        val uuid = JSONObject(order).getString("uuid")
+        this.basicClient.order.getOrder(OrderRequest(UUID.fromString(uuid)))
+          .doOnNext {
+            println("real order is $it")
+            println("additional : ${it.isFinished}, ${it.totalVolume}, ${it.avgPrice}")
+          }
+      }.flatMap {
+        PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = it.totalVolume)
+          .let { p -> this.basicClient.order.testPlaceOrder(p) }
+      }.flatMap {
+        println("first market sell order result : $it")
+        val uuid = JSONObject(it).getString("uuid")
+        Mono.just(uuid)
+      }.flatMap { uuid ->
+        Mono.defer { this.basicClient.order.testGetOrder(OrderRequest(UUID.fromString(uuid))) }
+          .delayElement(Duration.ofMillis(80))
+          .repeat(10)
+          .flatMap {
+            println("[Market] Order result is: $it")
+            Mono.just(it)
+          }.collectList()
+      }.flatMap {
+        val uuid = it.first().let { o -> JSONObject(o).getString("uuid") }
+        this.basicClient.order.getOrder(OrderRequest(UUID.fromString(uuid)))
+          .doOnNext {
+            println("real order is $it")
+            println("additional : ${it.isFinished}, ${it.totalVolume}, ${it.avgPrice}")
+          }
+      }.block()
+  }
 }

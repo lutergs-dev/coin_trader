@@ -54,11 +54,23 @@ class AlertService(
                   " ${it.sellPrice!!.toStrWithPoint()} 에 ${it.sellTypeStr()} 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
               }.let { body ->
                 val total = orderEntities.groupBy { it.sellType ?: "ERROR" }
-                  .let { "이득 ${(it["PROFIT"]?.size ?: 0) + (it["STOP_PROFIT"]?.size ?: 0)}번, 손실 ${(it["LOSS"]?.size ?: 0) + (it["STOP_LOSS"]?.size ?: 0)}번, 시간초과 ${it["TIMEOUT"]?.size ?: 0}번이 있었습니다." }
+                  .let {
+                    val phaseTotal = "1차 이득 ${(it["PROFIT"]?.size ?: 0)}번, 손실 ${(it["LOSS"]?.size ?: 0)}번, 2차 이득 ${(it["STOP_PROFIT"]?.size ?: 0)}번, 손실 ${(it["STOP_LOSS"]?.size ?: 0)}번"
+                    val timeout = it["TIMEOUT"]?.let { timeouts ->
+                      val profit = timeouts.filter { o -> o.sellPrice!! > o.buyPrice!! }.size
+                      val loss = timeouts.filter { o -> o.sellPrice!! < o.buyPrice!! }.size
+                      "시간초과 이득 ${profit}번, 손실 ${loss}번"
+                    }
+                    if (timeout == null) {
+                      "$phaseTotal 이 있었습니다."
+                    } else {
+                      "${phaseTotal}, $timeout 이 있었습니다."
+                    }
+                  }
                 Message(
                   topic = this.topicName,
                   title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
-                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body\n\n$total"
+                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body\n\n${total}"
                 )
               }
           } }.flatMap { this.messageSender.sendMessage(it) }

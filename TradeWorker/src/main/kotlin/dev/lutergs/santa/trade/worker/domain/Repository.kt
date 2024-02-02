@@ -12,8 +12,10 @@ interface LogRepository {
 
   fun newBuyOrder(response: OrderResponse): Mono<OrderResponse>
   fun finishBuyOrder(response: OrderResponse): Mono<OrderResponse>
-  fun newSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse>
+  fun completeBuyOrder(response: OrderResponse): Mono<OrderResponse>
+  fun placeSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse>
   fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse>
+  fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse>
   fun cancelSellOrder(sellUuid: UUID, buyUuid: UUID): Mono<Void>
 }
 

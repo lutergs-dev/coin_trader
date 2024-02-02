@@ -1,12 +1,6 @@
 package dev.lutergs.upbitclient.webclient
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import dev.lutergs.upbitclient.api.Param
-import org.springframework.core.codec.DecodingException
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Flux
@@ -23,6 +17,46 @@ class Requester(
     .baseUrl(baseUrl)
     .defaultHeader("Content-Type", "application/json")
     .build()
+
+  fun postTest(path: String, param: Param? = null): Mono<String> {
+    return this.webClient.post()
+      .uri { uri ->
+        uri.path(path)
+          .let { builder ->
+            when {
+              param == null -> builder
+              else -> builder.query(param.toParameterString())
+            }
+          }
+          .build()
+      }
+      .header("Authorization", this.tokenGenerator.createJWT(param))
+      .retrieve()
+      .bodyToMono(String::class.java)
+      .doOnError (WebClientResponseException::class.java) {
+        println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
+      }
+  }
+
+  fun getSingleTest(path: String, param: Param? = null): Mono<String> {
+    return this.webClient.get()
+      .uri { uri ->
+        uri.path(path)
+          .let { builder ->
+            when {
+              param == null -> builder
+              else -> builder.query(param.toParameterString())
+            }
+          }
+          .build()
+      }
+      .header("Authorization", this.tokenGenerator.createJWT(param))
+      .retrieve()
+      .bodyToMono(String::class.java)
+      .doOnError (WebClientResponseException::class.java) {
+        println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
+      }
+  }
 
   fun <T : Any> getSingle(path: String, param: Param? = null, responseClass: KClass<T>): Mono<T> {
     return this.webClient.get()

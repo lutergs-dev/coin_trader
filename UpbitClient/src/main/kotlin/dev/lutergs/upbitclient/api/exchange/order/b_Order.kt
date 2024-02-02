@@ -57,7 +57,7 @@ data class OrderResponse(
 ) {
   val isFinished: Boolean = when (this.orderType) {
     "price" -> this.state == "cancel"
-    "market" -> this.state == "cancel"
+    "market" -> this.state == "done"
     "limit" -> this.state == "done"
     else -> this.state == "done"
   }
@@ -70,10 +70,10 @@ data class OrderResponse(
   }
 
   val avgPrice: Double = when (this.orderType) {
-    "price" -> trades.sumOf { it.price * it.volume } / trades.sumOf { it.volume }
-    "market" -> trades.sumOf { it.price * it.volume } / trades.sumOf { it.volume }
-    "limit" -> price!!
-    else -> price!!
+    "price" -> (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
+    "market" -> (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
+    "limit" -> this.price!!
+    else -> this.price!!
   }
 }
 
