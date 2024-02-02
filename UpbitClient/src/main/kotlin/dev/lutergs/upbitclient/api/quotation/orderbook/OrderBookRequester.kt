@@ -9,9 +9,10 @@ import dev.lutergs.upbitclient.dto.MarketCodeDeserializer
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlin.math.absoluteValue
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class OrderBookRequester(requester: Requester) : RequestDao(requester) {
@@ -49,10 +50,11 @@ data class OrderBookResponse(
 
   fun nearestStepPrice(price: Double): Double {
     val stepString = this.step.toString()
-    return if (stepString.split(".")[1].toLong() != 0L) {
+    return if (stepString.split(".")[1].filter { it != '0' }.isNotBlank()) {
       val stepLength = this.step.toString().substringAfter(".").length
-      val origin = (price * this.step) / this.step
-      (origin * (10.0.pow(stepLength))).roundToInt().toDouble() / (10.0.pow(stepLength))
+      BigDecimal(price)
+        .setScale(stepLength, RoundingMode.HALF_UP)
+        .toDouble()
     } else {
       (price * this.step).roundToInt().toDouble() / this.step
     }
