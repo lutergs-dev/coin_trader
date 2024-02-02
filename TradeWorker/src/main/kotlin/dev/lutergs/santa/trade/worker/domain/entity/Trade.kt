@@ -61,10 +61,10 @@ data class TradeResult(
     sellResult = sellType
   )
 
-  private val earnPrice: Double = run{
+  private val earnPrice: Double get() {
     // 매도 주문이 존재하는지 검사
     this.sell ?: throw IllegalStateException("매도 주문이 없습니다. 가격을 계산할 수 없습니다. 전체 값 : $this")
-    this.sell.totalPrice - this.buy.totalPrice - (this.sell.paidFee + this.buy.paidFee)
+    return this.sell.totalPrice - this.buy.totalPrice - (this.sell.paidFee + this.buy.paidFee)
   }
 
   fun toMsg(): TradeResultMessage = run {

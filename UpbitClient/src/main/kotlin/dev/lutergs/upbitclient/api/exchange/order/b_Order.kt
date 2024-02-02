@@ -62,31 +62,38 @@ data class OrderResponse(
     else -> this.state == "done"
   }
 
-  val totalVolume: Double = when (this.orderType) {
-    "price" -> run {
-      takeIf { this.isFinished } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서 주문량을 조회했습니다.")
-      this.trades.sumOf { it.volume }
+  val totalVolume: Double get() {
+    return when (this.orderType) {
+      "price" -> run {
+        takeIf { this.isFinished } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서 주문량을 조회했습니다.")
+        this.trades.sumOf { it.volume }
+      }
+      "market" -> this.volume!!
+      "limit" -> this.volume!!
+      else -> this.volume!!
     }
-    "market" -> this.volume!!
-    "limit" -> this.volume!!
-    else -> this.volume!!
   }
 
 
-  val avgPrice: Double = when (this.orderType) {
-    "price" -> run {
-      takeIf { this.isFinished } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서, 평균매수단가를 조회했습니다.")
-      (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
+
+  val avgPrice: Double get() {
+    return when (this.orderType) {
+      "price" -> run {
+        takeIf { this.isFinished } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서, 평균매수단가를 조회했습니다.")
+        (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
+      }
+      "market" -> run {
+        takeIf { this.isFinished } ?: throw IllegalStateException("시장가 매도 주문이 완료되지 않은 상태에서, 평균매도단가를 조회했습니다.")
+        (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
+      }
+      "limit" -> this.price!!
+      else -> this.price!!
     }
-    "market" -> run {
-      takeIf { this.isFinished } ?: throw IllegalStateException("시장가 매도 주문이 완료되지 않은 상태에서, 평균매도단가를 조회했습니다.")
-      (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
-    }
-    "limit" -> this.price!!
-    else -> this.price!!
   }
 
-  val totalPrice: Double = this.totalVolume * this.avgPrice
+  val totalPrice: Double get() {
+    return this.totalVolume * this.avgPrice
+  }
   val totalPriceWithoutFee: Double = this.totalPrice - this.paidFee
 }
 
