@@ -2,6 +2,7 @@ package dev.lutergs.upbitclient.api.quotation.candle
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import reactor.core.publisher.Flux
 
 /**
  * 시장 캔들 정보를 나타내는 데이터 클래스
@@ -21,15 +22,45 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class CandleMinuteResponse(
-    @JsonProperty("market")                   val market: String,
-    @JsonProperty("candle_date_time_utc")     val candleDateTimeUtc: String,
-    @JsonProperty("candle_date_time_kst")     val candleDateTimeKst: String,
-    @JsonProperty("opening_price")            val openingPrice: Double,
-    @JsonProperty("high_price")               val highPrice: Double,
-    @JsonProperty("low_price")                val lowPrice: Double,
-    @JsonProperty("trade_price")              val tradePrice: Double,
-    @JsonProperty("timestamp")                val timestamp: Long,
-    @JsonProperty("candle_acc_trade_price")   val candleAccTradePrice: Double,
-    @JsonProperty("candle_acc_trade_volume")  val candleAccTradeVolume: Double,
-    @JsonProperty("unit")                     val unit: Int
-)
+  @JsonProperty("market") val market: String,
+  @JsonProperty("candle_date_time_utc") val candleDateTimeUtc: String,
+  @JsonProperty("candle_date_time_kst") val candleDateTimeKst: String,
+  @JsonProperty("opening_price") val openingPrice: Double,
+  @JsonProperty("high_price") val highPrice: Double,
+  @JsonProperty("low_price") val lowPrice: Double,
+  @JsonProperty("trade_price") val tradePrice: Double,
+  @JsonProperty("timestamp") val timestamp: Long,
+  @JsonProperty("candle_acc_trade_price") val candleAccTradePrice: Double,
+  @JsonProperty("candle_acc_trade_volume") val candleAccTradeVolume: Double,
+  @JsonProperty("unit") val unit: Int
+) {
+  companion object {
+    fun rsi(candles: List<CandleMinuteResponse>, period: Int = candles.size / 2): Double {
+      return candles
+        .sortedByDescending { it.timestamp }
+        .map { it.tradePrice }
+        .windowed(2, 1, false) { it[1] - it[0] }
+        .let { changes ->
+          val sma = changes.subList(0, period)
+            .let { smaPeriod -> Pair(
+              smaPeriod.filter { it > 0 }.sum() / smaPeriod.size,
+              smaPeriod.filter { it < 0 }.sum() / smaPeriod.size * -1.0
+            ) }
+          val smoothing = 2.0 / (period + 1).toDouble()
+          changes.subList(period, changes.size)
+            .fold(sma) { ema, change ->
+              when {
+                change > 0 -> Pair(
+                  (change * smoothing) + (ema.first * (1.0 - smoothing)), ema.second * (1 - smoothing))
+                change < 0 -> Pair(
+                  ema.first * (1 - smoothing), ((change * -1.0) * smoothing) + (ema.second * (1.0 - smoothing)))
+                else -> Pair(ema.first * (1 - smoothing), ema.second * (1 - smoothing))
+              }
+            }.let {
+              (if (it.second == 0.0) { 0.0 } else { it.first / it.second })
+                .let { rs -> 100.0 - (100.0 / (1 + rs))}
+            }
+        }
+    }
+  }
+}

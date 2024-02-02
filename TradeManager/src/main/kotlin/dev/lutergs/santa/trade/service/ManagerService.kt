@@ -2,13 +2,11 @@ package dev.lutergs.santa.trade.service
 
 import dev.lutergs.santa.trade.domain.*
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteRequest
+import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteResponse
 import dev.lutergs.upbitclient.api.quotation.market.MarketWarning
 import dev.lutergs.upbitclient.api.quotation.ticker.TickerResponse
-import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
-import io.kubernetes.client.openapi.apis.BatchV1Api
-import io.kubernetes.client.openapi.models.*
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
@@ -21,26 +19,11 @@ import kotlin.math.roundToInt
 class ManagerService(
   private val alertService: AlertService,
   private val upbitClient: BasicClient,
-  private val repository: DangerCoinRepository,
-  private val kubernetesInfo: KubernetesInfo,
+  private val dangerCoinRepository: DangerCoinRepository,
+  private val workerController: WorkerController,
   private val workerConfig: WorkerConfig,
-  private val maxMoney: Int,
-  private val minMoney: Int
 ) {
-  private val api = BatchV1Api()
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
-
-//  init {
-//    this.initWorker()
-//      .onErrorComplete {
-//        if (it is ApiException) {
-//          println(it.responseBody)
-//          println(it.responseHeaders)
-//          println(it.localizedMessage)
-//        }
-//        it is ApiException
-//      }.blockLast()
-//  }
 
   @KafkaListener(topics = ["trade-result"])
   fun consume(record: ConsumerRecord<String, String>) {
@@ -54,14 +37,16 @@ class ManagerService(
       .next()
       .flatMap { Mono.just(it.balance.roundToInt() - 1000) }
       .flatMapMany { totalRawMoney ->
-        val workerCount = (totalRawMoney / this.maxMoney)
-          .let { if (totalRawMoney % this.maxMoney >= this.minMoney) it + 1 else it }
+        val workerCount = (totalRawMoney / this.workerConfig.initMaxMoney)
+          .let { if (totalRawMoney % this.workerConfig.initMaxMoney >= this.workerConfig.initMinMoney) it + 1 else it }
         if (workerCount == 0) {
-          this.logger.info("코인이 팔렸지만, 현재 가진 금액 (${totalRawMoney}) 이 최소거래값 (${this.minMoney}) 보다 적어 거래하지 않습니다.")
+          this.logger.info("코인이 팔렸지만, 현재 가진 금액 (${totalRawMoney}) 이 최소거래값 (${this.workerConfig.initMinMoney}) 보다 적어 거래하지 않습니다.")
           Flux.just(false)
         } else {
           val totalMoney = AtomicInteger(totalRawMoney)
           this.findApplicableCoin(workerCount)
+
+            // TODO : 해당 로직 리팩터링 필요
             .flatMapMany { tickers ->
               if (tickers.size < workerCount) {
                 this.logger.info("${workerCount}개의 Worker 가 가능함에도, " +
@@ -71,12 +56,12 @@ class ManagerService(
               tickers
                 .map { it.market }
                 .map { market ->
-                  if (totalMoney.get() >= this.maxMoney) {
-                    this.initK8sWorker(market, this.maxMoney)
-                      .also { this.logger.info("${market.quote} 를 ${this.maxMoney} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
-                    totalMoney.addAndGet(-this.maxMoney)
-                  } else if (totalMoney.get() < this.maxMoney && totalMoney.get() >= this.minMoney) {
-                    this.initK8sWorker(market, totalMoney.get())
+                  if (totalMoney.get() >= this.workerConfig.initMaxMoney) {
+                    this.workerController.initWorker(this.workerConfig, market, this.workerConfig.initMaxMoney)
+                      .also { this.logger.info("${market.quote} 를 ${this.workerConfig.initMaxMoney} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
+                    totalMoney.addAndGet(-this.workerConfig.initMaxMoney)
+                  } else if (totalMoney.get() < this.workerConfig.initMaxMoney && totalMoney.get() >= this.workerConfig.initMinMoney) {
+                    this.workerController.initWorker(this.workerConfig, market, totalMoney.get())
                       .also { this.logger.info("${market.quote} 를 ${totalMoney.get()} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
                     totalMoney.set(0)
                   }
@@ -90,67 +75,14 @@ class ManagerService(
                 }
             )
         }
-
       }
   }
-
-  private fun initK8sWorker(market: MarketCode, money: Int): V1Job {
-    val generatedStr = Util.generateRandomString()
-    return V1Job()
-      .apiVersion("batch/v1")
-      .kind("Job")
-      .metadata(
-        V1ObjectMeta()
-          .name("coin-trade-worker-${generatedStr}")
-          .namespace(this.kubernetesInfo.namespace)
-      )
-      .spec(
-        V1JobSpec()
-          .backoffLimit(3)
-          .ttlSecondsAfterFinished(3600)
-          .template(
-            V1PodTemplateSpec()
-              .metadata(
-                V1ObjectMeta()
-                  .name("coin-trade-worker-${generatedStr}")
-                  .namespace(this.kubernetesInfo.namespace)
-                  .labels(mapOf(Pair("sidecar.istio.io/inject", "false")))
-              ).spec(
-                V1PodSpec()
-                  .restartPolicy("Never")
-                  .imagePullSecrets(listOf(V1LocalObjectReference()
-                    .name(this.kubernetesInfo.imagePullSecretName)
-                  ))
-                  .containers(listOf(V1Container()
-                    .name("coin-trade-worker")
-                    .image(this.kubernetesInfo.imageName)
-                    .imagePullPolicy(this.kubernetesInfo.imagePullPolicy)
-                    .envFrom(listOf(V1EnvFromSource()
-                      .secretRef(V1SecretEnvSource().name(this.kubernetesInfo.envSecretName))
-                    ))
-                    .env(listOf(
-                      V1EnvVar().name("PHASE_1_WAIT_MINUTE").value(this.workerConfig.phase1.waitMinute.toString()),
-                      V1EnvVar().name("PHASE_1_PROFIT_PERCENT").value(this.workerConfig.phase1.profitPercent.toStrWithPoint(1)),
-                      V1EnvVar().name("PHASE_1_LOSS_PERCENT").value(this.workerConfig.phase1.lossPercent.toStrWithPoint(1)),
-                      V1EnvVar().name("PHASE_2_WAIT_MINUTE").value(this.workerConfig.phase2.waitMinute.toString()),
-                      V1EnvVar().name("PHASE_2_LOSS_PERCENT").value(this.workerConfig.phase2.lossPercent.toStrWithPoint(1)),
-                      V1EnvVar().name("START_MARKET").value(market.toString()),
-                      V1EnvVar().name("START_MONEY").value(money.toString()),
-                      V1EnvVar().name("APP_ID").value(generatedStr)
-                    ))
-                  ))
-              )
-          )
-      )
-      .let {
-        this.api.createNamespacedJob(this.kubernetesInfo.namespace, it, null, null, null, null)
-      }
-  }
-
 
   private fun findApplicableCoin(coinCount: Int): Mono<List<TickerResponse>> {
     if (coinCount < 0) throw IllegalArgumentException("코인 개수는 0 이상의 값을 지정해야 합니다")
     return this.upbitClient.market.getMarketCode()
+
+      // 1. 코인 리스트 중, 한화 거래 마켓이면서, 위험 상태가 아닌 코인을 선별
       .filter {
         if (it.market.base == "KRW" && it.marketWarning == MarketWarning.CAUTION) {
           this.logger.info("코인 ${it.market.quote} 은 CAUTION 상태라서 거래하지 않습니다.")
@@ -160,18 +92,26 @@ class ManagerService(
       .collectList()
       .doOnNext { this.logger.info("한화로 거래 가능하며, 위험 상태가 아닌 코인 리스트는 다음과 같습니다 : ${it.map { d -> d.quote }}") }
       .flatMap { Mono.just(Markets(it)) }
+
+      // 2. 최근 24시간 거래량이 큰 순으로, 25개 선별
       .flatMapMany { this.upbitClient.ticker.getTicker(it) }
       .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt() }
       .take(25, true)
       .delayElements(Duration.ofMillis(200))    // 업비트 API Timeout 고려
+
+      // 3. 거래가능 규칙 (고가 / 저가 비율 및 RSI) 에 따라 필터링
       .filterWhen { this.isTradeable(it) }
+
+      // 4. 호가 계산 우선순위에 따라 걸러질 수 있게 우선순위 재정렬
       .flatMap { ticker -> this.getPriority(ticker)
         .flatMap { p -> Mono.fromCallable { Pair(ticker, p) } }
       }.sort { o1, o2 -> (o2.second - o1.second).roundToInt() }
       .collectList()
+
+      // 5. 최근 거래 중, phase 1 에서 손실을 본 코인 판별
       .flatMap { coinList ->
         this.logger.info("거래 가능한 코인 중, 우선순위에 의거한 상위 ${coinList.size}개 코인은 다음과 같습니다 : ${coinList.map { "${it.first.market.quote}(${it.second.toStrWithPoint()})" }}")
-        this.repository.getDangerCoins()
+        this.dangerCoinRepository.getDangerCoins()
           .collectList()
           .flatMap { dangerCoinList ->
             this.logger.info("최근에 너무 가격이 떨어져 24시간동안 거래하지 않을 코인은 다음과 같습니다 : $dangerCoinList")
@@ -179,7 +119,10 @@ class ManagerService(
               .filterNot { dangerCoinList.contains(it.first.market.quote) }
               .let { Mono.just(it.map { p -> p.first }) }
           }
-      }.flatMap { coinList ->
+      }
+
+      // 6. 실행해야하는 Worker 의 개수에 따라 코인 개수 필터링
+      .flatMap { coinList ->
         (if (coinCount <= 2) {
           this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 6개의 코인을 선택합니다. ")
           coinList.subListOrAll(6)
@@ -192,6 +135,8 @@ class ManagerService(
         }).let { Mono.just(it) }
       }
       .doOnNext { this.logger.info("최종으로 선발된 후보 코인은 다음과 같습니다 : ${it.map { t -> t.market.quote }}") }
+
+      // 7. 랜덤으로 Worker 의 개수만큼 코인 최종 결정
       .flatMap { Mono.just(it.shuffled().take(coinCount)) }
       .doOnNext { this.logger.info("거래할 최종 코인은 ${it.map { d -> d.market.quote }} 입니다.") }
   }
@@ -237,42 +182,13 @@ class ManagerService(
         }
 
         // rule 2
-        val rsi = candles
-          .sortedByDescending { it.timestamp }
-          .map { it.tradePrice }
-          .let { this.calculateRSI(it) }
+        val rsi = CandleMinuteResponse.rsi(candles)
         if (rsi >= 80.0 || rsi <= 20.0) {
           result = false
           this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (80 이상 혹은 20 이하) 이어서 거래하지 않습니다.")
         }
 
         Mono.just(result)
-      }
-  }
-
-  private fun calculateRSI(prices: List<Double>, period: Int = prices.size / 2): Double {
-    return prices
-      .windowed(2, 1, false) { it[1] - it[0] }
-      .let { changes ->
-        val sma = changes.subList(0, period)
-          .let { smaPeriod -> Pair(
-            smaPeriod.filter { it > 0 }.sum() / smaPeriod.size,
-            smaPeriod.filter { it < 0 }.sum() / smaPeriod.size * -1.0
-          ) }
-        val smoothing = 2.0 / (period + 1).toDouble()
-        changes.subList(period, changes.size)
-          .fold(sma) { ema, change ->
-            when {
-              change > 0 -> Pair(
-                (change * smoothing) + (ema.first * (1.0 - smoothing)), ema.second * (1 - smoothing))
-              change < 0 -> Pair(
-                ema.first * (1 - smoothing), ((change * -1.0) * smoothing) + (ema.second * (1.0 - smoothing)))
-              else -> Pair(ema.first * (1 - smoothing), ema.second * (1 - smoothing))
-            }
-          }.let {
-            (if (it.second == 0.0) { 0.0 } else { it.first / it.second })
-              .let { rs -> 100.0 - (100.0 / (1 + rs))}
-          }
       }
   }
 }

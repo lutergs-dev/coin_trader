@@ -1,8 +1,8 @@
 package dev.lutergs.santa.trade.worker.domain
 
-import dev.lutergs.santa.trade.worker.domain.entity.AlarmMessage
+import dev.lutergs.santa.trade.worker.domain.entity.DangerCoinMessage
 import dev.lutergs.santa.trade.worker.domain.entity.SellType
-import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
+import dev.lutergs.santa.trade.worker.domain.entity.TradeResultMessage
 import dev.lutergs.santa.trade.worker.infra.KafkaMessageResponse
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import reactor.core.publisher.Mono
@@ -20,7 +20,7 @@ interface LogRepository {
 }
 
 interface MessageSender {
-  fun sendAlarm(msg: AlarmMessage): Mono<KafkaMessageResponse>
+  fun sendAlarm(msg: DangerCoinMessage): Mono<KafkaMessageResponse>
 
-  fun sendTradeResult(msg: TradeResult): Mono<KafkaMessageResponse>
+  fun sendTradeResult(msg: TradeResultMessage): Mono<KafkaMessageResponse>
 }

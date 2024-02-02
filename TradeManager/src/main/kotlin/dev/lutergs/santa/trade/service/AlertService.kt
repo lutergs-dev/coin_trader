@@ -29,6 +29,12 @@ class AlertService(
       .block()
   }
 
+  @Deprecated("개발 중인 함수", level = DeprecationLevel.HIDDEN)
+  fun sendRequestedEarning(lastHour: Int) {
+    OffsetDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(lastHour.toLong())
+      .let { this.tradeHistoryRepository.getTradeHistoryAfter(it) }
+  }
+
   fun sendTodayEarning(): Mono<String> {
     return OffsetDateTime.now(ZoneId.of("Asia/Seoul")).minusDays(1)
       .let { this.tradeHistoryRepository.getTradeHistoryAfter(it) }

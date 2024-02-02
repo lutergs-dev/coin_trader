@@ -1,5 +1,6 @@
 package dev.lutergs.santa.trade.worker
 
+import dev.lutergs.santa.trade.worker.infra.LoggerCreate
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent
 import org.springframework.context.ApplicationListener
@@ -17,6 +18,9 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
 
     // set current timezone to Seoul
     TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"))
+
+    // set logger
+    LoggerCreate.setAppName(environment.getProperty("custom.id") ?: "WORKER_UNKNOWN_ID")
 
     this.logger.info(String.format("Inject variable info to Spring complete! current env is %s", envName))
     this.printCurrentProperties(environment)

@@ -1,6 +1,6 @@
 package dev.lutergs.santa.trade.domain
 
-data class KubernetesInfo (
+data class KubernetesInfo(
   val namespace: String,
   val imagePullSecretName: String,
   val imagePullPolicy: String,
@@ -8,9 +8,11 @@ data class KubernetesInfo (
   val envSecretName: String
 )
 
-data class WorkerConfig (
+data class WorkerConfig(
   val phase1: Phase1,
-  val phase2: Phase2
+  val phase2: Phase2,
+  val initMaxMoney: Int,
+  val initMinMoney: Int
 )
 
 data class Phase1(
@@ -24,7 +26,7 @@ data class Phase2(
   val lossPercent: Double
 )
 
-data class Message (
+data class Message(
   val topic: String,
   val title: String,
   val body: String

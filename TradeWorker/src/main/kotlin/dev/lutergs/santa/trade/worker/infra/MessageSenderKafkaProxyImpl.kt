@@ -3,8 +3,8 @@ package dev.lutergs.santa.trade.worker.infra
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.worker.domain.MessageSender
-import dev.lutergs.santa.trade.worker.domain.entity.AlarmMessage
-import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
+import dev.lutergs.santa.trade.worker.domain.entity.DangerCoinMessage
+import dev.lutergs.santa.trade.worker.domain.entity.TradeResultMessage
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
@@ -32,11 +32,11 @@ class MessageSenderKafkaProxyImpl(
     ).build()
   private val logger = LoggerCreate.createLogger(this::class)
 
-  override fun sendAlarm(msg: AlarmMessage): Mono<KafkaMessageResponse> {
+  override fun sendAlarm(msg: DangerCoinMessage): Mono<KafkaMessageResponse> {
     return this.sendPost("/${this.alarmTopicName}/records", KafkaMessage(msg.key, msg.value))
   }
 
-  override fun sendTradeResult(msg: TradeResult): Mono<KafkaMessageResponse> {
+  override fun sendTradeResult(msg: TradeResultMessage): Mono<KafkaMessageResponse> {
     return this.sendPost("/${this.tradeResultTopicName}/records", KafkaMessage(msg.key, msg.value))
   }
 

@@ -61,8 +61,10 @@ class OrderEntity: Persistable<String>, Serializable {
     return this.sellType
       ?.let {
         when (it) {
-          "PROFIT" -> "익절"
-          "LOSS" -> "손절"
+          "PROFIT" -> "1차 익절"
+          "LOSS" -> "1차 손절"
+          "STOP_PROFIT" -> "2차 익절"
+          "STOP_LOSS" -> "2차 손절"
           "TIMEOUT" -> "시간초과"
           else -> "오류"
         }
