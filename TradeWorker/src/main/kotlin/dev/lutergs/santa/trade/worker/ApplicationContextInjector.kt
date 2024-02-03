@@ -23,7 +23,7 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
     LoggerCreate.setAppName(environment.getProperty("custom.id") ?: "WORKER_UNKNOWN_ID")
 
     this.logger.info(String.format("Inject variable info to Spring complete! current env is %s", envName))
-    this.printCurrentProperties(environment)
+//    this.printCurrentProperties(environment)
   }
 
   private fun printCurrentProperties(environment: ConfigurableEnvironment) {

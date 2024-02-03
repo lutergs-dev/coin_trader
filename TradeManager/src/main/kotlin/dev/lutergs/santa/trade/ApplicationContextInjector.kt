@@ -28,7 +28,7 @@ class ApplicationContextInjector: ApplicationListener<ApplicationEnvironmentPrep
     this.setKubernetesClient(environment)
 
     this.logger.info(String.format("Inject variable info to Spring complete! current env is %s", envName))
-    this.printCurrentProperties(environment)
+//    this.printCurrentProperties(environment)
   }
 
   private fun setKubernetesClient(environment: ConfigurableEnvironment) {
