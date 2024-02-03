@@ -43,21 +43,17 @@ data class OrderBookResponse(
   @JsonProperty("total_bid_size")   val totalBidSize: Double,
   @JsonProperty("orderbook_units")  val orderbookUnits: List<OrderBookUnit>
 ) {
-  private val step = orderbookUnits.windowed(2, 1, false) {
-    min((it[0].bidPrice - it[1].bidPrice).absoluteValue, (it[0].askPrice - it[1].askPrice).absoluteValue)
+  val step = orderbookUnits.windowed(2, 1, false) {
+    val bidDiff = (BigDecimal(it[0].bidPrice.toString()).subtract(BigDecimal(it[1].bidPrice.toString()))).abs()
+    val askDiff = (BigDecimal(it[0].askPrice.toString()).subtract(BigDecimal(it[1].askPrice.toString()))).abs()
+    bidDiff.min(askDiff)
   }.minOrNull()
     ?: throw IllegalStateException("호가 리스트가 존재하지 않습니다!")
 
   fun nearestStepPrice(price: Double): Double {
-    val stepString = this.step.toString()
-    return if (stepString.split(".")[1].filter { it != '0' }.isNotBlank()) {
-      val stepLength = this.step.toString().substringAfter(".").length
-      BigDecimal(price)
-        .setScale(stepLength, RoundingMode.HALF_UP)
-        .toDouble()
-    } else {
-      (price * this.step).roundToInt().toDouble() / this.step
-    }
+    return BigDecimal(price)
+      .setScale(this.step.scale(), RoundingMode.HALF_UP)
+      .toDouble()
   }
 }
 

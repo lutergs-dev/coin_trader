@@ -14,13 +14,13 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
 import java.util.*
+import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 class TestBasicClient {
 
   private val basicClient = BasicClient(
-    "a",
-    "b"
+    "a", "b"
   )
 
   @Test
@@ -227,5 +227,21 @@ class TestBasicClient {
             println("additional : ${it.isFinished()}, ${it.totalVolume()}, ${it.avgPrice()}")
           }
       }.block()
+  }
+  
+  @Test
+  fun `Orderbook 의 step 출력 테스트`() {
+    this.basicClient.market.getMarketCode()
+      .filter { it.market.base == "KRW" }
+      .take(25)
+      .delayElements(Duration.ofMillis(200))
+      .flatMap { this.basicClient.orderBook.getOrderBook(Markets.fromMarket(it.market)) }
+      .flatMap {
+        println("Coin is ${it.market.quote}, value is ${it.orderbookUnits[0].bidPrice}, ${it.orderbookUnits[1].bidPrice}")
+        println("step is : ${it.step}, value if 9999.16534819 is round to ${it.nearestStepPrice(9999.16534819)}")
+        Mono.just(it)
+      }
+      .blockLast()
+
   }
 }
