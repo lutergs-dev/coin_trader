@@ -233,8 +233,14 @@ class TestBasicClient {
   fun `Orderbook 의 step 출력 테스트`() {
     this.basicClient.market.getMarketCode()
       .filter { it.market.base == "KRW" }
-      .take(25)
-      .delayElements(Duration.ofMillis(200))
+      .collectList()
+      .flatMap { mcr -> Mono.fromCallable { Markets(mcr.map { it.market }) } }
+      .flatMapMany { this.basicClient.ticker.getTicker(it) }
+      .sort { o1, o2 ->
+        (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt()
+      }
+      .take(25, true)
+      .delayElements(Duration.ofMillis(400))
       .flatMap { this.basicClient.orderBook.getOrderBook(Markets.fromMarket(it.market)) }
       .flatMap {
         println("Coin is ${it.market.quote}, value is ${it.orderbookUnits[0].bidPrice}, ${it.orderbookUnits[1].bidPrice}")

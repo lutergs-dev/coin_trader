@@ -48,6 +48,7 @@ data class OrderBookResponse(
     val askDiff = (BigDecimal(it[0].askPrice.toString()).subtract(BigDecimal(it[1].askPrice.toString()))).abs()
     bidDiff.min(askDiff)
   }.minOrNull()
+    ?.stripTrailingZeros()
     ?: throw IllegalStateException("호가 리스트가 존재하지 않습니다!")
 
   fun nearestStepPrice(price: Double): Double {
