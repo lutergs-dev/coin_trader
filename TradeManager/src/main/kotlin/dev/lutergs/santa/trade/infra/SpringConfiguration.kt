@@ -36,12 +36,13 @@ class SpringConfiguration {
     @Value("\${custom.trade.sell.phase1.profit-percent}") p1ProfitPercent: Double,
     @Value("\${custom.trade.sell.phase1.loss-percent}") p1LossPercent: Double,
     @Value("\${custom.trade.sell.phase2.wait-minute}") p2WaitMinute: Long,
+    @Value("\${custom.trade.sell.phase2.profit-percent}") p2ProfitPercent: Double,
     @Value("\${custom.trade.sell.phase2.loss-percent}") p2LossPercent: Double,
     @Value("\${custom.trade.worker.max-money}") maxMoney: Int,
     @Value("\${custom.trade.worker.min-money}") minMoney: Int
   ): WorkerConfig = WorkerConfig(
-    Phase1(p1WaitMinute, p1ProfitPercent, p1LossPercent),
-    Phase2(p2WaitMinute, p2LossPercent),
+    Phase(p1WaitMinute, p1ProfitPercent, p1LossPercent),
+    Phase(p2WaitMinute, p2ProfitPercent, p2LossPercent),
     maxMoney, minMoney
   )
   

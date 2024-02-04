@@ -9,20 +9,15 @@ data class KubernetesInfo(
 )
 
 data class WorkerConfig(
-  val phase1: Phase1,
-  val phase2: Phase2,
+  val phase1: Phase,
+  val phase2: Phase,
   val initMaxMoney: Int,
   val initMinMoney: Int
 )
 
-data class Phase1(
+data class Phase(
   val waitMinute: Long,
   val profitPercent: Double,
-  val lossPercent: Double
-)
-
-data class Phase2(
-  val waitMinute: Long,
   val lossPercent: Double
 )
 

@@ -58,6 +58,7 @@ class WorkerControllerImpl(
                             V1EnvVar().name("PHASE_1_PROFIT_PERCENT").value(workerConfig.phase1.profitPercent.toStrWithPoint(1)),
                             V1EnvVar().name("PHASE_1_LOSS_PERCENT").value(workerConfig.phase1.lossPercent.toStrWithPoint(1)),
                             V1EnvVar().name("PHASE_2_WAIT_MINUTE").value(workerConfig.phase2.waitMinute.toString()),
+                            V1EnvVar().name("PHASE_2_PROFIT_PERCENT").value(workerConfig.phase2.profitPercent.toStrWithPoint(1)),
                             V1EnvVar().name("PHASE_2_LOSS_PERCENT").value(workerConfig.phase2.lossPercent.toStrWithPoint(1)),
                             V1EnvVar().name("START_MARKET").value(market.toString()),
                             V1EnvVar().name("START_MONEY").value(price.toString()),

@@ -22,6 +22,7 @@ custom:
         loss-percent: ${PHASE_1_LOSS_PERCENT:3.0}
       phase2:
         wait-minute: ${PHASE_2_WAIT_MINUTE:90}
+        profit-percent: ${PHASE_2_PROFIT_PERCENT:0.1}
         loss-percent: ${PHASE_2_LOSS_PERCENT:2.0}
   upbit:
     access-key: ${UPBIT_ACCESS_KEY:access-key}

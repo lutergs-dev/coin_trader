@@ -7,9 +7,8 @@ import dev.lutergs.santa.trade.worker.domain.UpbitClient
 import dev.lutergs.santa.trade.worker.domain.LogRepository
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
+import dev.lutergs.santa.trade.worker.domain.entity.TradePhase
 import dev.lutergs.santa.trade.worker.domain.entity.Phase
-import dev.lutergs.santa.trade.worker.domain.entity.Phase1
-import dev.lutergs.santa.trade.worker.domain.entity.Phase2
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
@@ -70,10 +69,11 @@ class SpringConfiguration {
     @Value("\${custom.trade.sell.phase1.profit-percent}") p1ProfitPercent: Double,
     @Value("\${custom.trade.sell.phase1.loss-percent}") p1LossPercent: Double,
     @Value("\${custom.trade.sell.phase2.wait-minute}") p2WaitMinute: Long,
+    @Value("\${custom.trade.sell.phase2.profit-percent}") p2ProfitPercent: Double,
     @Value("\${custom.trade.sell.phase2.loss-percent}") p2LossPercent: Double,
-  ): Phase = Phase(
-    Phase1(p1WaitMinute, p1ProfitPercent, p1LossPercent),
-    Phase2(p2WaitMinute, p2LossPercent)
+  ): TradePhase = TradePhase(
+    Phase(p1WaitMinute, p1ProfitPercent, p1LossPercent),
+    Phase(p2WaitMinute, p2ProfitPercent, p2LossPercent)
   )
 }
 

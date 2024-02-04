@@ -12,16 +12,16 @@ enum class SellType {
   PROFIT, LOSS, TIMEOUT, STOP_LOSS, STOP_PROFIT, NULL
 }
 
-data class Phase(
-  val phase1: Phase1,
-  val phase2: Phase2
+data class TradePhase(
+  val phase1: Phase,
+  val phase2: Phase
 ) {
   fun totalWaitMinute(): Long {
     return phase1.waitMinute + phase2.waitMinute
   }
 }
 
-data class Phase1(
+data class Phase(
   val waitMinute: Long,
   val profitPercent: Double,
   val lossPercent: Double
@@ -30,15 +30,6 @@ data class Phase1(
     return price * (1.0 + (profitPercent * 0.01))
   }
 
-  fun getLossPrice(price: Double): Double {
-    return price * (1.0 - (lossPercent * 0.01))
-  }
-}
-
-data class Phase2(
-  val waitMinute: Long,
-  val lossPercent: Double
-) {
   fun getLossPrice(price: Double): Double {
     return price * (1.0 - (lossPercent * 0.01))
   }
