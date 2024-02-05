@@ -7,14 +7,14 @@ import kotlin.reflect.KClass
 
 object LoggerCreate {
   private var appName: String = "WORKER_NOT_INITIATED"
-  private var isAppNameSetted = false
+  private var isAppNameSet = false
 
   fun setAppName(appName: String) {
-    if (this.isAppNameSetted) {
+    if (this.isAppNameSet) {
       throw IllegalAccessException("Logger 생성기가 설정된 이후에 설정값에 접근했습니다.")
     } else {
       this.appName = appName
-      this.isAppNameSetted = true
+      this.isAppNameSet = true
     }
   }
 

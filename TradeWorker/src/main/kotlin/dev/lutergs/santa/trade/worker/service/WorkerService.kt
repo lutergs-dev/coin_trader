@@ -85,22 +85,21 @@ class WorkerService(
                 ).flatMap { p ->
                   val (firstSellOrder, currentPrice) = p.t1 to p.t2.tradePrice
                   this.logCurrentStatus(tradeResult, this.tradePhase.phase1, currentPrice, profitPrice, logger)
-
-                  if (firstSellOrder.isFinished()) {
-                    logger.info("코인을 이득을 보고 매매했습니다.")
-                    this.repository.finishSellOrder(tradeResult.buy, firstSellOrder, SellType.PROFIT)
+                  when {
+                    // 이득주문 완료시
+                    firstSellOrder.isFinished() -> this.repository.finishSellOrder(tradeResult.buy, firstSellOrder, SellType.PROFIT)
+                      .doOnNext { logger.info("코인을 이득을 보고 매매했습니다.") }
                       .thenReturn(tradeResult.sellFinished(firstSellOrder, SellType.PROFIT))
-                  } else if (currentPrice <= lossPrice) {
-                    logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
-                    this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
+                    // 손실점 도달시
+                    currentPrice <= lossPrice -> this.client.order.cancelOrder(OrderRequest(firstSellOrder.uuid))
+                      .doOnNext { logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.") }
                       .flatMap { this.repository.cancelSellOrder(firstSellOrder.uuid, tradeResult.buy.uuid).thenReturn(it) }
                       .doOnNext { logger.info("코인 매도 주문을 취소했습니다. 현재 가격으로 매도합니다.") }
                       .flatMap { PlaceOrderRequest(it.market, OrderType.MARKET, OrderSide.ASK, volume = firstSellOrder.totalVolume())
-                        .let {p -> this.client.placeSellOrderAndWait(p, tradeResult.buy, SellType.LOSS) }
+                        .let { p -> this.client.placeSellOrderAndWait(p, tradeResult.buy, SellType.LOSS) }
                       }.doOnNext { logger.info("코인 현재가 매도가 완료되었습니다.") }
                       .flatMap { Mono.fromCallable { tradeResult.sellFinished(it, SellType.LOSS) } }
-                  } else {
-                    Mono.empty()
+                    else -> Mono.empty()
                   }
                 }.repeatWhenEmpty((this.tradePhase.phase1.waitMinute * 60 / this.watchIntervalSecond).toInt()) {
                   it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
@@ -178,7 +177,7 @@ class WorkerService(
               "이득가: ${profitPrice?.toStrWithPoint(2) ?: phase.getProfitPrice(tradeResult.buy.avgPrice()).toStrWithPoint(2)}, " +
               "손실가: ${phase.getLossPrice(tradeResult.buy.avgPrice()).toStrWithPoint(2)}, " +
               "현재가: ${currentPrice.toStrWithPoint(2)}, " +
-              "구매가: ${tradeResult.buy.avgPrice()} " +
+              "구매가: ${tradeResult.buy.avgPrice().toStrWithPoint(2)} " +
               "경과시간: $hours 시간 $minutes 분 $secs 초")
           }
       }

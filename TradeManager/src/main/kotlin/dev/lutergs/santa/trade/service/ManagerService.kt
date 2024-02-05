@@ -122,18 +122,14 @@ class ManagerService(
       }
 
       // 6. 실행해야하는 Worker 의 개수에 따라 코인 개수 필터링
-      .flatMap { coinList ->
-        (if (coinCount <= 2) {
-          this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 6개의 코인을 선택합니다. ")
-          coinList.subListOrAll(6)
-        } else if (coinCount <= 5) {
-          this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 ${coinCount * 3}개의 코인을 선택합니다.")
-          coinList.subListOrAll(coinCount * 3)
-        } else {
-          this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 15개의 코인을 선택합니다.")
-          coinList.subListOrAll(15)
-        }).let { Mono.just(it) }
-      }
+      .flatMap { coinList -> when {
+        coinCount <= 2 -> coinList.subListOrAll(6)
+          .also { this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 6개의 코인을 선택합니다. ") }
+        coinCount <= 5 -> coinList.subListOrAll(coinCount * 3)
+          .also { this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 ${coinCount * 3}개의 코인을 선택합니다.") }
+        else -> coinList.subListOrAll(15)
+          .also { this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 15개의 코인을 선택합니다.") }
+      }.let { Mono.just(it) } }
       .doOnNext { this.logger.info("최종으로 선발된 후보 코인은 다음과 같습니다 : ${it.map { t -> t.market.quote }}") }
 
       // 7. 랜덤으로 Worker 의 개수만큼 코인 최종 결정

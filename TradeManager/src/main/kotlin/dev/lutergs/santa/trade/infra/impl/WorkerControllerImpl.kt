@@ -27,7 +27,7 @@ class WorkerControllerImpl(
       .spec(
         V1JobSpec()
           .backoffLimit(3)
-          .ttlSecondsAfterFinished(3600)
+          .ttlSecondsAfterFinished(600)
           .template(
             V1PodTemplateSpec()
               .metadata(
