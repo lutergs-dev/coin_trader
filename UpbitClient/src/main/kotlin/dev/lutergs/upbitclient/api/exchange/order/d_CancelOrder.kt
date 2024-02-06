@@ -32,29 +32,29 @@ import java.util.UUID
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class CancelOrderResponse(
   @JsonDeserialize(using = UuidDeserializer::class)
-    @JsonProperty("uuid")                          val uuid: UUID,
-  @JsonProperty("side")                          val side: String,
-  @JsonProperty("ord_type")                      val ordType: String,
+  @JsonProperty("uuid") val uuid: UUID,
+  @JsonProperty("side") val side: String,
+  @JsonProperty("ord_type") val ordType: String,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("price")                         val price: Double,
-  @JsonProperty("state")                         val state: String,
+  @JsonProperty("price") val price: Double,
+  @JsonProperty("state") val state: String,
   @JsonDeserialize(using = MarketCodeDeserializer::class)
-    @JsonProperty("market")                        val market: MarketCode,
+  @JsonProperty("market") val market: MarketCode,
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
-    @JsonProperty("created_at")                    val createdAt: OffsetDateTime,
+  @JsonProperty("created_at") val createdAt: OffsetDateTime,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("volume")                        val volume: Double,
+  @JsonProperty("volume") val volume: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("remaining_volume")              val remainingVolume: Double,
+  @JsonProperty("remaining_volume") val remainingVolume: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("reserved_fee")                  val reservedFee: Double,
+  @JsonProperty("reserved_fee") val reservedFee: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("remaining_fee")                 val remainingFee: Double,
+  @JsonProperty("remaining_fee") val remainingFee: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("paid_fee")                      val paidFee: Double,
+  @JsonProperty("paid_fee") val paidFee: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("locked")                        val locked: Double,
+  @JsonProperty("locked") val locked: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("executed_volume")               val executedVolume: Double,
-  @JsonProperty("trades_count")                  val tradesCount: Int
+  @JsonProperty("executed_volume") val executedVolume: Double,
+  @JsonProperty("trades_count") val tradesCount: Int
 )

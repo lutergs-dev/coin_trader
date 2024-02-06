@@ -17,11 +17,10 @@ import kotlin.math.roundToInt
 
 class OrderBookRequester(requester: Requester) : RequestDao(requester) {
 
-    fun getOrderBook(markets: Markets): Flux<OrderBookResponse> {
-        return this.requester.getMany("/orderbook", markets, OrderBookResponse::class)
-    }
+  fun getOrderBook(markets: Markets): Flux<OrderBookResponse> {
+    return this.requester.getMany("/orderbook", markets, OrderBookResponse::class)
+  }
 }
-
 
 
 /**
@@ -37,11 +36,11 @@ class OrderBookRequester(requester: Requester) : RequestDao(requester) {
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderBookResponse(
   @JsonDeserialize(using = MarketCodeDeserializer::class)
-  @JsonProperty("market")           val market: MarketCode,
-  @JsonProperty("timestamp")        val timestamp: Long,
-  @JsonProperty("total_ask_size")   val totalAskSize: Double,
-  @JsonProperty("total_bid_size")   val totalBidSize: Double,
-  @JsonProperty("orderbook_units")  val orderbookUnits: List<OrderBookUnit>
+  @JsonProperty("market") val market: MarketCode,
+  @JsonProperty("timestamp") val timestamp: Long,
+  @JsonProperty("total_ask_size") val totalAskSize: Double,
+  @JsonProperty("total_bid_size") val totalBidSize: Double,
+  @JsonProperty("orderbook_units") val orderbookUnits: List<OrderBookUnit>
 ) {
   val step = orderbookUnits.windowed(2, 1, false) {
     val bidDiff = (BigDecimal(it[0].bidPrice.toString()).subtract(BigDecimal(it[1].bidPrice.toString()))).abs()
@@ -69,8 +68,8 @@ data class OrderBookResponse(
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderBookUnit(
-    @JsonProperty("ask_price")   val askPrice: Double,
-    @JsonProperty("bid_price")   val bidPrice: Double,
-    @JsonProperty("ask_size")    val askSize: Double,
-    @JsonProperty("bid_size")    val bidSize: Double
+  @JsonProperty("ask_price") val askPrice: Double,
+  @JsonProperty("bid_price") val bidPrice: Double,
+  @JsonProperty("ask_size") val askSize: Double,
+  @JsonProperty("bid_size") val bidSize: Double
 )

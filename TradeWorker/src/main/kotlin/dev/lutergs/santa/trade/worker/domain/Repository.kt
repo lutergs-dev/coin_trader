@@ -2,25 +2,24 @@ package dev.lutergs.santa.trade.worker.domain
 
 import dev.lutergs.santa.trade.worker.domain.entity.DangerCoinMessage
 import dev.lutergs.santa.trade.worker.domain.entity.SellType
+import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResultMessage
 import dev.lutergs.santa.trade.worker.infra.KafkaMessageResponse
-import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
+import dev.lutergs.upbitclient.dto.MarketCode
 import reactor.core.publisher.Mono
-import java.util.UUID
-
-interface LogRepository {
-
-  fun newBuyOrder(response: OrderResponse): Mono<OrderResponse>
-  fun finishBuyOrder(response: OrderResponse): Mono<OrderResponse>
-  fun completeBuyOrder(response: OrderResponse): Mono<OrderResponse>
-  fun placeSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse>
-  fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse>
-  fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse>
-  fun cancelSellOrder(sellUuid: UUID, buyUuid: UUID): Mono<Void>
-}
 
 interface MessageSender {
   fun sendAlarm(msg: DangerCoinMessage): Mono<KafkaMessageResponse>
 
   fun sendTradeResult(msg: TradeResultMessage): Mono<KafkaMessageResponse>
+}
+
+interface Trader {
+  fun sellMarket(tradeResult: TradeResult, sellType: SellType): Mono<TradeResult>
+  fun buyMarket(market: MarketCode, money: Double): Mono<TradeResult>
+  fun placeSellLimit(tradeResult: TradeResult, price: Double): Mono<TradeResult>
+  fun finishSellOrder(tradeResult: TradeResult): Mono<TradeResult>
+  // completeSellLimit 도 있어야함
+  fun cancelSellLimit(tradeResult: TradeResult): Mono<TradeResult>
+  fun buyLimit(market: MarketCode, volume: Double, price: Double): Mono<TradeResult>
 }

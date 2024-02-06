@@ -8,10 +8,10 @@ import dev.lutergs.upbitclient.webclient.Requester
  * */
 
 interface Param {
-    fun toParameterString(): String
-    fun toJwtTokenString(): String
+  fun toParameterString(): String
+  fun toJwtTokenString(): String
 }
 
 abstract class RequestDao(
-    protected val requester: Requester
+  protected val requester: Requester
 )

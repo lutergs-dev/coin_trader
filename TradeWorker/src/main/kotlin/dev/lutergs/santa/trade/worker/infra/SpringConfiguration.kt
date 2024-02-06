@@ -3,8 +3,6 @@ package dev.lutergs.santa.trade.worker.infra
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import dev.lutergs.santa.trade.worker.domain.UpbitClient
-import dev.lutergs.santa.trade.worker.domain.LogRepository
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
 import dev.lutergs.santa.trade.worker.domain.entity.TradePhase
@@ -51,12 +49,8 @@ class SpringConfiguration {
   @Bean
   fun upbitClient(
     @Value("\${custom.upbit.access-key}") accessKey: String,
-    @Value("\${custom.upbit.secret-key}") secretKey: String,
-    repository: LogRepository
-  ) = UpbitClient(
-    basicClient = BasicClient(accessKey, secretKey),
-    repository = repository
-  )
+    @Value("\${custom.upbit.secret-key}") secretKey: String
+  ) = BasicClient(accessKey, secretKey)
 
   @Bean
   fun objectMapper(): ObjectMapper = ObjectMapper()

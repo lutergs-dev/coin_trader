@@ -1,6 +1,5 @@
 package dev.lutergs.santa.trade.domain
 
-import dev.lutergs.santa.trade.infra.impl.OrderEntity
 import dev.lutergs.upbitclient.dto.MarketCode
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -12,8 +11,8 @@ interface DangerCoinRepository {
 }
 
 interface TradeHistoryRepository {
-  fun getTradeHistoryBetweenDatetime(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<OrderEntity>
-  fun getTradeHistoryAfter(datetime: OffsetDateTime): Flux<OrderEntity>
+  fun getTradeHistoryBetweenDatetime(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<CompleteOrderResult>
+  fun getTradeHistoryAfter(datetime: OffsetDateTime): Flux<CompleteOrderResult>
 }
 
 interface AlertMessageSender {

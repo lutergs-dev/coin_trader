@@ -28,7 +28,7 @@ class TriggerController(
   private val alertService: AlertService
 ) {
   fun triggerTodayEarning(request: ServerRequest): Mono<ServerResponse> {
-    return this.alertService.sendTodayEarning()
+    return this.alertService.sendRequestedEarning(24)
       .flatMap { ServerResponse.ok().bodyValue(it) }
   }
 }

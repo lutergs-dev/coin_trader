@@ -15,7 +15,32 @@ class AlertService(
   private val objectMapper: ObjectMapper,
   private val topicName: String
 ) {
-  private val dateTimeFormatter = DateTimeFormatter.ofPattern("HH'시' mm'분'")
+  data class OrderFoldDto(
+    val profit: Double,
+    val sellTypeCount: MutableMap<SellType, Int>,
+    val body: String
+  ) {
+    fun update(data: CompleteOrderResult): OrderFoldDto = OrderFoldDto(
+      profit = this.profit + (data.profit ?: 0.0),
+      sellTypeCount = run {
+        this.sellTypeCount.putIfAbsent(data.sellType, 0)
+        this.sellTypeCount[data.sellType] = this.sellTypeCount[data.sellType]!! + 1
+        this.sellTypeCount
+      },
+      body = this.body + data.toInfoString() + "\n"
+    )
+    fun toMessage(topicName: String): Message {
+      val total = "1차 이득 ${this.sellTypeCount[SellType.PROFIT] ?: 0}번, 손실 ${this.sellTypeCount[SellType.LOSS] ?: 0}번, " +
+        "2차 이득 ${this.sellTypeCount[SellType.STOP_PROFIT] ?: 0} 번, ${this.sellTypeCount[SellType.STOP_LOSS] ?: 0}번, " +
+        "시간초과 이득 ${this.sellTypeCount[SellType.TIMEOUT_PROFIT] ?: 0} 번, ${this.sellTypeCount[SellType.TIMEOUT_LOSS] ?: 0}번이 있었습니다."
+      return Message(
+        topic = topicName,
+        title = "최근 24시간 동안 ${this.profit.toStrWithPoint()} 원을 벌었습니다.",
+        body = "코인 매수/매도 기록은 다음과 같습니다.\n\n${this.body}\n\n$total"
+      )
+    }
+  }
+
 
 
   @KafkaListener(topics = ["danger-coin-alert"])
@@ -29,56 +54,18 @@ class AlertService(
       .block()
   }
 
-  @Deprecated("개발 중인 함수", level = DeprecationLevel.HIDDEN)
-  fun sendRequestedEarning(lastHour: Int) {
-    OffsetDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(lastHour.toLong())
-      .let { this.tradeHistoryRepository.getTradeHistoryAfter(it) }
-  }
-
-  fun sendTodayEarning(): Mono<String> {
-    return OffsetDateTime.now(ZoneId.of("Asia/Seoul")).minusDays(1)
+  fun sendRequestedEarning(lastHour: Int): Mono<String> {
+    return OffsetDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(lastHour.toLong())
       .let { this.tradeHistoryRepository.getTradeHistoryAfter(it) }
       .let { orderEntityFlux ->
         orderEntityFlux
-          .filter {
-            it.buyPlaceAt != null &&
-            it.coin != null &&
-            it.buyPrice != null &&
-            it.sellPrice != null &&
-            it.buyFinishAt != null &&
-            it.sellFinishAt != null &&
-            it.profit != null &&
-            it.sellType != null
-          }.collectList()
+          .filter { it.sellType.isFinished() }
+          .collectList()
           .flatMap { orderEntities -> Mono.fromCallable {
             orderEntities
-              .sortedBy { it.buyPlaceAt!! }
-              .joinToString(separator = "\n") {
-                val isProfit = (if (it.buyPrice!! < it.sellPrice!!) "이득" else "손해")
-                "[${it.buyPlaceAt!!.toLocalDateTime().format(this.dateTimeFormatter)}]" +
-                  " ${it.coin!!} ${it.buyPrice!!.toStrWithPoint()} 에 매수," +
-                  " ${it.sellPrice!!.toStrWithPoint()} 에 ${it.sellTypeStr()} 매도. ${it.profit!!.toStrWithPoint()} 원 $isProfit"
-              }.let { body ->
-                val total = orderEntities.groupBy { it.sellType ?: "ERROR" }
-                  .let {
-                    val phaseTotal = "1차 이득 ${(it["PROFIT"]?.size ?: 0)}번, 손실 ${(it["LOSS"]?.size ?: 0)}번, 2차 이득 ${(it["STOP_PROFIT"]?.size ?: 0)}번, 손실 ${(it["STOP_LOSS"]?.size ?: 0)}번"
-                    val timeout = it["TIMEOUT"]?.let { timeouts ->
-                      val profit = timeouts.filter { o -> o.sellPrice!! > o.buyPrice!! }.size
-                      val loss = timeouts.filter { o -> o.sellPrice!! < o.buyPrice!! }.size
-                      "시간초과 이득 ${profit}번, 손실 ${loss}번"
-                    }
-                    if (timeout == null) {
-                      "$phaseTotal 이 있었습니다."
-                    } else {
-                      "${phaseTotal}, $timeout 이 있었습니다."
-                    }
-                  }
-                Message(
-                  topic = this.topicName,
-                  title = "최근 24시간 동안 ${orderEntities.sumOf { it.profit ?: 0.0 }.toStrWithPoint()} 원을 벌었습니다.",
-                  body = "코인 매수/매도기록은 다음과 같습니다.\n\n$body\n\n${total}"
-                )
-              }
+            .sortedBy { it.buy.placeAt }
+            .fold(OrderFoldDto(0.0, mutableMapOf(), "")) { acc, data -> acc.update(data) }
+              .toMessage(this.topicName)
           } }.flatMap { this.messageSender.sendMessage(it) }
       }
   }

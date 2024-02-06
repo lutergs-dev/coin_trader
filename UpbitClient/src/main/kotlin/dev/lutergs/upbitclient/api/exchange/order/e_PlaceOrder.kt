@@ -35,7 +35,8 @@ data class PlaceOrderResponse(
   @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
   @JsonProperty("side") val side: String,
-  @JsonProperty("ord_type") val ordType: String,
+  @JsonDeserialize(using = OrderTypeDeserializer::class)
+  @JsonProperty("ord_type") val orderType: OrderType,
   @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("price") val price: Double? = null,
   @JsonProperty("state") val state: String,

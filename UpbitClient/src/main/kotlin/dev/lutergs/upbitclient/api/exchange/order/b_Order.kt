@@ -36,9 +36,10 @@ data class OrderResponse(
   @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
   @JsonProperty("side") val side: String,
-  @JsonProperty("ord_type") val orderType: String,
+  @JsonDeserialize(using = OrderTypeDeserializer::class)
+  @JsonProperty("ord_type") val orderType: OrderType,
   @JsonProperty("price") val price: Double? = null,
-  @JsonProperty("state") val state: String,        // done 이 완료
+  @JsonProperty("state") val state: String,
   @JsonSerialize(using = MarketCodeSerializer::class)
   @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
@@ -55,40 +56,43 @@ data class OrderResponse(
   @JsonProperty("trades_count") val tradesCount: Int,
   @JsonProperty("trades") val trades: List<OrderTrade>
 ) {
+
+  /**
+   * 주문의 상태가 완료될 때, true 아닐 때 false 를 return 함.
+   * 시장가 매수의 경우 문서에 따라 체결주문 취소 (cancel) 거나 (매수금액이 극히 일부 남았을 때), 완료 (done) 모두를 주문완료라고 판단함.
+   * 그 이외의 경우는 모두 "done" 일 때 완료라고 판단
+   * */
   fun isFinished(): Boolean {
     return when (this.orderType) {
-      "price" -> this.state == "cancel"
-      "market" -> this.state == "done"
-      "limit" -> this.state == "done"
-      else -> this.state == "done"
+      OrderType.PRICE -> this.state == "cancel" || this.state == "done"
+      OrderType.MARKET -> this.state == "done"
+      OrderType.LIMIT -> this.state == "done"
     }
   }
 
   fun totalVolume(): Double  {
     return when (this.orderType) {
-      "price" -> run {
+      OrderType.PRICE -> run {
         takeIf { this.isFinished() } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서 주문량을 조회했습니다.")
         this.trades.sumOf { it.volume }
       }
-      "market" -> this.volume!!
-      "limit" -> this.volume!!
-      else -> this.volume!!
+      OrderType.MARKET -> this.volume!!
+      OrderType.LIMIT -> this.volume!!
     }
   }
 
 
   fun avgPrice(): Double {
     return when (this.orderType) {
-      "price" -> run {
+      OrderType.PRICE -> run {
         takeIf { this.isFinished() } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서, 평균매수단가를 조회했습니다.")
         (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
       }
-      "market" -> run {
+      OrderType.MARKET -> run {
         takeIf { this.isFinished() } ?: throw IllegalStateException("시장가 매도 주문이 완료되지 않은 상태에서, 평균매도단가를 조회했습니다.")
         (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
       }
-      "limit" -> this.price!!
-      else -> this.price!!
+      OrderType.LIMIT -> this.price!!
     }
   }
 

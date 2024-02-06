@@ -84,3 +84,9 @@ class UuidDeserializer : JsonDeserializer<UUID>() {
     return p.text.let { UUID.fromString(it) }
   }
 }
+
+class OrderTypeDeserializer : JsonDeserializer<OrderType>() {
+  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OrderType {
+    return p.text.let { OrderType.fromString(it) }
+  }
+}

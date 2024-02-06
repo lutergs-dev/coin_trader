@@ -12,32 +12,32 @@ import reactor.core.publisher.Flux
 
 class MarketRequester(requester: Requester) : RequestDao(requester) {
 
-    fun getMarketCode(): Flux<MarketCodeResponse> {
-        return this.requester.getMany("/market/all", MarketCodeRequest(true), MarketCodeResponse::class)
-    }
+  fun getMarketCode(): Flux<MarketCodeResponse> {
+    return this.requester.getMany("/market/all", MarketCodeRequest(true), MarketCodeResponse::class)
+  }
 }
 
 data class MarketCodeRequest(
-    @JsonProperty("isDetails")  val isDetails: Boolean
-): Param {
-    override fun toParameterString(): String {
-        return this.toJwtTokenString()
-    }
+  @JsonProperty("isDetails") val isDetails: Boolean
+) : Param {
+  override fun toParameterString(): String {
+    return this.toJwtTokenString()
+  }
 
-    override fun toJwtTokenString(): String {
-        return "isDetails=${this.isDetails}"
-    }
+  override fun toJwtTokenString(): String {
+    return "isDetails=${this.isDetails}"
+  }
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MarketCodeResponse(
   @JsonDeserialize(using = MarketCodeDeserializer::class)
-    @JsonProperty("market")         val market: MarketCode,
-  @JsonProperty("korean_name")    val koreanName: String,
-  @JsonProperty("english_name")   val englishName: String,
+  @JsonProperty("market") val market: MarketCode,
+  @JsonProperty("korean_name") val koreanName: String,
+  @JsonProperty("english_name") val englishName: String,
   @JsonProperty("market_warning") val marketWarning: MarketWarning
 )
 
 enum class MarketWarning {
-    NONE, CAUTION
+  NONE, CAUTION
 }

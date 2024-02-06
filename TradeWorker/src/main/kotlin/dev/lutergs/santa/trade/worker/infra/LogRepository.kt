@@ -1,7 +1,6 @@
 package dev.lutergs.santa.trade.worker.infra
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import dev.lutergs.santa.trade.worker.domain.LogRepository
 import dev.lutergs.santa.trade.worker.domain.entity.SellType
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import org.springframework.data.annotation.Id
@@ -67,9 +66,9 @@ class OrderEntity: Persistable<String>, Serializable {
 interface OrderEntityReactiveRepository: ReactiveCrudRepository<OrderEntity, String>
 
 @Component
-class LogRepositoryImpl(
+class LogRepository(
   private val repository: OrderEntityReactiveRepository
-): LogRepository {
+) {
   private val logger = LoggerCreate.createLogger(this::class)
 
   private fun retryFindById(id: String): Mono<OrderEntity> {
@@ -85,7 +84,7 @@ class LogRepositoryImpl(
   }
 
   // new buy order
-  override fun newBuyOrder(response: OrderResponse): Mono<OrderResponse> {
+  fun newBuyOrder(response: OrderResponse): Mono<OrderResponse> {
     return OrderEntity()
       .apply {
         this.coin = response.market.quote
@@ -99,7 +98,7 @@ class LogRepositoryImpl(
       }.let { this.retrySave(it).thenReturn(response) }
   }
 
-  override fun finishBuyOrder(response: OrderResponse): Mono<OrderResponse> {
+  fun finishBuyOrder(response: OrderResponse): Mono<OrderResponse> {
     return this.retryFindById(response.uuid.toString())
       .flatMap {
         it.buyFinishAt = response.trades.maxOf { d -> d.createdAt }
@@ -108,7 +107,7 @@ class LogRepositoryImpl(
   }
 
   // 시장가로 거래할 때 사용
-  override fun completeBuyOrder(response: OrderResponse): Mono<OrderResponse> {
+  fun completeBuyOrder(response: OrderResponse): Mono<OrderResponse> {
     return OrderEntity()
       .apply {
         this.coin = response.market.quote
@@ -123,7 +122,7 @@ class LogRepositoryImpl(
       }.let { this.retrySave(it).thenReturn(response) }
   }
 
-  override fun placeSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse> {
+  fun placeSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse> {
     return this.retryFindById(buyUuid.toString())
       .flatMap {
         it.sellId = response.uuid.toString()
@@ -136,7 +135,7 @@ class LogRepositoryImpl(
       }.thenReturn(response)
   }
 
-  override fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
+  fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
     return this.retryFindById(buyResponse.uuid.toString())
       .flatMap {
         if (it.sellId != sellResponse.uuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
@@ -151,7 +150,7 @@ class LogRepositoryImpl(
   }
 
   // 시장가로 거래할 때 사용
-  override fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
+  fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
     return this.retryFindById(buyResponse.uuid.toString())
       .flatMap {
         it.sellId = sellResponse.uuid.toString()
@@ -168,7 +167,7 @@ class LogRepositoryImpl(
       }
   }
 
-  override fun cancelSellOrder(sellUuid: UUID, buyUuid: UUID): Mono<Void> {
+  fun cancelSellOrder(sellUuid: UUID, buyUuid: UUID): Mono<Void> {
     return this.retryFindById(buyUuid.toString())
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(2)))
       .flatMap {

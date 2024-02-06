@@ -9,9 +9,9 @@ import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
 
 class AccountRequester(requester: Requester) : RequestDao(requester) {
-    fun getAccount(): Flux<AccountResponse> {
-        return this.requester.getMany("/accounts", null, AccountResponse::class)
-    }
+  fun getAccount(): Flux<AccountResponse> {
+    return this.requester.getMany("/accounts", null, AccountResponse::class)
+  }
 }
 
 /**
@@ -25,13 +25,13 @@ class AccountRequester(requester: Requester) : RequestDao(requester) {
  * */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class AccountResponse(
-    @JsonProperty("currency")               val currency: String,       // TODO : 추후 ENUM 으로 변경
-    @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("balance")                val balance: Double,
-    @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("locked")                 val locked: Double,
-    @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("avg_buy_price")          val avgBuyPrice: Double,
-    @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,
-    @JsonProperty("unit_currency")          val unitCurrency: String
+  @JsonProperty("currency") val currency: String,       // TODO : 추후 ENUM 으로 변경
+  @JsonDeserialize(using = NumberStringDeserializer::class)
+  @JsonProperty("balance") val balance: Double,
+  @JsonDeserialize(using = NumberStringDeserializer::class)
+  @JsonProperty("locked") val locked: Double,
+  @JsonDeserialize(using = NumberStringDeserializer::class)
+  @JsonProperty("avg_buy_price") val avgBuyPrice: Double,
+  @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,
+  @JsonProperty("unit_currency") val unitCurrency: String
 )

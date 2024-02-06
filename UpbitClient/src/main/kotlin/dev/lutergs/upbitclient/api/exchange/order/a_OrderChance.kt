@@ -26,14 +26,14 @@ import dev.lutergs.upbitclient.dto.NumberStringDeserializer
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderChanceResponse(
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("bid_fee")          val bidFee: Double,
+  @JsonProperty("bid_fee") val bidFee: Double,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("ask_fee")          val askFee: Double,
-  @JsonProperty("market")           val market: OrderChanceMarket,
-  @JsonProperty("ask_types")        val askTypes: List<String> = listOf(),
-  @JsonProperty("bid_types")        val bidTypes: List<String> = listOf(),
-  @JsonProperty("bid_account")      val bidAccount: OrderChanceAccountStatus,
-  @JsonProperty("ask_account")      val askAccount: OrderChanceAccountStatus
+  @JsonProperty("ask_fee") val askFee: Double,
+  @JsonProperty("market") val market: OrderChanceMarket,
+  @JsonProperty("ask_types") val askTypes: List<String> = listOf(),
+  @JsonProperty("bid_types") val bidTypes: List<String> = listOf(),
+  @JsonProperty("bid_account") val bidAccount: OrderChanceAccountStatus,
+  @JsonProperty("ask_account") val askAccount: OrderChanceAccountStatus
 )
 
 /**
@@ -52,15 +52,15 @@ data class OrderChanceResponse(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderChanceMarket(
   @JsonDeserialize(using = MarketCodeDeserializer::class)
-    @JsonProperty("id")               val id: MarketCode,
-  @JsonProperty("name")             val name: String,
-  @JsonProperty("order_types")      val orderTypes: List<String>,
-  @JsonProperty("order_sides")      val orderSides: List<String>,
-  @JsonProperty("bid")              val bid: OrderChanceMarketRestriction,
-  @JsonProperty("ask")              val ask: OrderChanceMarketRestriction,
+  @JsonProperty("id") val id: MarketCode,
+  @JsonProperty("name") val name: String,
+  @JsonProperty("order_types") val orderTypes: List<String>,
+  @JsonProperty("order_sides") val orderSides: List<String>,
+  @JsonProperty("bid") val bid: OrderChanceMarketRestriction,
+  @JsonProperty("ask") val ask: OrderChanceMarketRestriction,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("max_total")        val maxTotal: Double,
-  @JsonProperty("state")            val state: String
+  @JsonProperty("max_total") val maxTotal: Double,
+  @JsonProperty("state") val state: String
 )
 
 /**
@@ -74,9 +74,9 @@ data class OrderChanceMarket(
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.ALWAYS)
 data class OrderChanceMarketRestriction(
-    @JsonProperty("currency")         val currency: String,
-    @JsonProperty("price_unit")       val priceUnit: String? = null,
-    @JsonProperty("min_total")        val minTotal: Double
+  @JsonProperty("currency") val currency: String,
+  @JsonProperty("price_unit") val priceUnit: String? = null,
+  @JsonProperty("min_total") val minTotal: Double
 )
 
 /**
@@ -92,13 +92,13 @@ data class OrderChanceMarketRestriction(
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderChanceAccountStatus(
-    @JsonProperty("currency")         val currency: String,
-    @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("balance")          val balance: Double,
-    @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("locked")           val locked: Double,
-    @JsonDeserialize(using = NumberStringDeserializer::class)
-    @JsonProperty("avg_buy_price")    val avgBuyPrice: Double,
-    @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,
-    @JsonProperty("unit_currency")    val unitCurrency: String
+  @JsonProperty("currency") val currency: String,
+  @JsonDeserialize(using = NumberStringDeserializer::class)
+  @JsonProperty("balance") val balance: Double,
+  @JsonDeserialize(using = NumberStringDeserializer::class)
+  @JsonProperty("locked") val locked: Double,
+  @JsonDeserialize(using = NumberStringDeserializer::class)
+  @JsonProperty("avg_buy_price") val avgBuyPrice: Double,
+  @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,
+  @JsonProperty("unit_currency") val unitCurrency: String
 )
