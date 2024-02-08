@@ -1,6 +1,9 @@
-package dev.lutergs.santa.trade.domain
+package dev.lutergs.santa.trade.manager.domain
 
+import dev.lutergs.santa.universal.oracle.SellType
+import dev.lutergs.santa.universal.util.toStrWithScale
 import dev.lutergs.upbitclient.dto.MarketCode
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -16,14 +19,14 @@ data class KubernetesInfo(
 data class WorkerConfig(
   val phase1: Phase,
   val phase2: Phase,
-  val initMaxMoney: Int,
-  val initMinMoney: Int
+  val initMaxMoney: Long,
+  val initMinMoney: Long
 )
 
 data class Phase(
   val waitMinute: Long,
-  val profitPercent: Double,
-  val lossPercent: Double
+  val profitPercent: BigDecimal,
+  val lossPercent: BigDecimal
 )
 
 data class Message(
@@ -43,54 +46,23 @@ data class Message(
   }
 }
 
-// TODO : order state 를 관리하는 entity 작성 필요
-enum class SellType {
-  PROFIT,
-  LOSS,
-  STOP_PROFIT,
-  STOP_LOSS,
-  TIMEOUT_PROFIT,
-  TIMEOUT_LOSS,
-  NOT_COMPLETED,
-  NOT_PLACED;
-  fun isFinished(): Boolean {
-    return when (this) {
-      PROFIT, LOSS, STOP_PROFIT, STOP_LOSS, TIMEOUT_PROFIT, TIMEOUT_LOSS -> true
-      else -> false
-    }
-  }
-  
-  fun toInfoString(): String {
-    return when (this) {
-      PROFIT -> "1차 익절"
-      LOSS -> "1차 손절"
-      STOP_PROFIT -> "2차 익절"
-      STOP_LOSS -> "2차 손절"
-      TIMEOUT_PROFIT -> "시간초과 익절"
-      TIMEOUT_LOSS -> "시간초과 손절"
-      NOT_COMPLETED -> "매도주문 대기중"
-      NOT_PLACED -> "매도주문 없음"
-    }
-  }
-}
-
 data class CompleteOrderResult(
   val coin: MarketCode,
   val buy: OrderResult,
   val sell: OrderResult?,
-  val profit: Double?,
+  val profit: BigDecimal?,
   val sellType: SellType
 ) {
   fun toInfoString(): String {
     return if (sellType.isFinished()) {
       val isProfit = if (this.buy.price < this.sell!!.price) "이득" else "손해"
       "[${this.buy.placeAt.toLocalDateTime().format(dateTimeFormatter)}] " +
-        "${this.coin.quote} ${this.buy.price.toStrWithPoint()} 에 매수, " +
-        "${this.sell.price.toStrWithPoint()} 에 ${this.sellType.toInfoString()} 매도, ${this.profit!!.toStrWithPoint()} 원 $isProfit"
+        "${this.coin.quote} ${this.buy.price.toStrWithScale()} 에 매수, " +
+        "${this.sell.price.toStrWithScale()} 에 ${this.sellType.toInfoString()} 매도, ${this.profit!!.toStrWithScale()} 원 $isProfit"
     } else {
       // 주문완료되지 않은 것에 대한 String은...?
       "[${this.buy.placeAt.toLocalDateTime().format(dateTimeFormatter)}] " +
-        "${this.coin.quote} ${this.buy.price.toStrWithPoint()} 에 매수, " +
+        "${this.coin.quote} ${this.buy.price.toStrWithScale()} 에 매수, " +
         "매도 진행 중"
     }
   }
@@ -102,10 +74,10 @@ data class CompleteOrderResult(
 
 data class OrderResult(
   val id: UUID,
-  val price: Double,
-  val fee: Double,
-  val volume: Double,
-  val won: Double,
+  val price: BigDecimal,
+  val fee: BigDecimal,
+  val volume: BigDecimal,
+  val won: BigDecimal,
   val placeAt: OffsetDateTime,
   val finishAt: OffsetDateTime
 )

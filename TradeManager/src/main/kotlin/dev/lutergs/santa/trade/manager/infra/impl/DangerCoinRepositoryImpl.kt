@@ -1,6 +1,6 @@
-package dev.lutergs.santa.trade.infra.impl
+package dev.lutergs.santa.trade.manager.infra.impl
 
-import dev.lutergs.santa.trade.domain.DangerCoinRepository
+import dev.lutergs.santa.trade.manager.domain.DangerCoinRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed

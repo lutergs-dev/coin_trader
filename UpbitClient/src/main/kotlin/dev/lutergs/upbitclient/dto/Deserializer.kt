@@ -6,12 +6,13 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class DateDeserializer : JsonDeserializer<LocalDate>() {
+class DateDeserializer: JsonDeserializer<LocalDate>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): LocalDate {
     val dateString = p.text
     return LocalDate.of(
@@ -22,7 +23,7 @@ class DateDeserializer : JsonDeserializer<LocalDate>() {
   }
 }
 
-class TimeDeserializer : JsonDeserializer<LocalTime>() {
+class TimeDeserializer: JsonDeserializer<LocalTime>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): LocalTime {
     val dateString = p.text
     return LocalTime.of(
@@ -33,7 +34,7 @@ class TimeDeserializer : JsonDeserializer<LocalTime>() {
   }
 }
 
-class DateWithHyphenDeserializer : JsonDeserializer<LocalDate>() {
+class DateWithHyphenDeserializer: JsonDeserializer<LocalDate>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): LocalDate {
     val dateStrings = p.text.split("-")
     return LocalDate.of(
@@ -44,14 +45,14 @@ class DateWithHyphenDeserializer : JsonDeserializer<LocalDate>() {
   }
 }
 
-class NumberStringDeserializer : JsonDeserializer<Double>() {
-  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Double {
-    return p.text.toDouble()
+class NumberStringDeserializer: JsonDeserializer<BigDecimal>() {
+  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): BigDecimal {
+    return BigDecimal(p.text)
   }
 }
 
 
-class MarketCodeDeserializer : JsonDeserializer<MarketCode>() {
+class MarketCodeDeserializer: JsonDeserializer<MarketCode>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): MarketCode {
     return p.text.split("-").let {
       MarketCode(it[0], it[1])
@@ -59,34 +60,40 @@ class MarketCodeDeserializer : JsonDeserializer<MarketCode>() {
   }
 }
 
-class MarketCodeSerializer : JsonSerializer<MarketCode>() {
+class MarketCodeSerializer: JsonSerializer<MarketCode>() {
   override fun serialize(value: MarketCode, gen: JsonGenerator, serializers: SerializerProvider) {
     gen.writeString(value.toString())
   }
 
 }
 
-class OffsetDateTimeDeserializer : JsonDeserializer<OffsetDateTime>() {
+class OffsetDateTimeDeserializer: JsonDeserializer<OffsetDateTime>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OffsetDateTime {
     return p.text.let { OffsetDateTime.parse(it) }
   }
 }
 
-class OffsetDateTimeSerializer : JsonSerializer<OffsetDateTime>() {
+class OffsetDateTimeSerializer: JsonSerializer<OffsetDateTime>() {
   override fun serialize(value: OffsetDateTime, gen: JsonGenerator, serializers: SerializerProvider) {
     gen.writeString(value.toString())
   }
 
 }
 
-class UuidDeserializer : JsonDeserializer<UUID>() {
+class UuidDeserializer: JsonDeserializer<UUID>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UUID {
     return p.text.let { UUID.fromString(it) }
   }
 }
 
-class OrderTypeDeserializer : JsonDeserializer<OrderType>() {
+class OrderTypeDeserializer: JsonDeserializer<OrderType>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OrderType {
     return p.text.let { OrderType.fromString(it) }
+  }
+}
+
+class OrderSideDeserializer: JsonDeserializer<OrderSide>() {
+  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OrderSide {
+    return OrderSide.fromRawString(p.text)
   }
 }

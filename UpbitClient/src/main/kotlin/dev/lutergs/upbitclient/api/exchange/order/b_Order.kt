@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import dev.lutergs.upbitclient.dto.*
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -35,10 +36,11 @@ import java.util.UUID
 data class OrderResponse(
   @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
-  @JsonProperty("side") val side: String,
+  @JsonDeserialize(using = OrderSideDeserializer::class)
+  @JsonProperty("side") val side: OrderSide,
   @JsonDeserialize(using = OrderTypeDeserializer::class)
   @JsonProperty("ord_type") val orderType: OrderType,
-  @JsonProperty("price") val price: Double? = null,
+  @JsonProperty("price") val price: BigDecimal? = null,
   @JsonProperty("state") val state: String,
   @JsonSerialize(using = MarketCodeSerializer::class)
   @JsonDeserialize(using = MarketCodeDeserializer::class)
@@ -46,13 +48,13 @@ data class OrderResponse(
   @JsonSerialize(using = OffsetDateTimeSerializer::class)
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime,
-  @JsonProperty("volume") val volume: Double? = null,
-  @JsonProperty("remaining_volume") val remainingVolume: Double? = null,
-  @JsonProperty("reserved_fee") val reservedFee: Double,
-  @JsonProperty("remaining_fee") val remainingFee: Double,
-  @JsonProperty("paid_fee") val paidFee: Double,
-  @JsonProperty("locked") val locked: Double,
-  @JsonProperty("executed_volume") val executedVolume: Double,
+  @JsonProperty("volume") val volume: BigDecimal? = null,
+  @JsonProperty("remaining_volume") val remainingVolume: BigDecimal? = null,
+  @JsonProperty("reserved_fee") val reservedFee: BigDecimal,
+  @JsonProperty("remaining_fee") val remainingFee: BigDecimal,
+  @JsonProperty("paid_fee") val paidFee: BigDecimal,
+  @JsonProperty("locked") val locked: BigDecimal,
+  @JsonProperty("executed_volume") val executedVolume: BigDecimal,
   @JsonProperty("trades_count") val tradesCount: Int,
   @JsonProperty("trades") val trades: List<OrderTrade>
 ) {
@@ -70,7 +72,7 @@ data class OrderResponse(
     }
   }
 
-  fun totalVolume(): Double  {
+  fun totalVolume(): BigDecimal  {
     return when (this.orderType) {
       OrderType.PRICE -> run {
         takeIf { this.isFinished() } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서 주문량을 조회했습니다.")
@@ -82,7 +84,7 @@ data class OrderResponse(
   }
 
 
-  fun avgPrice(): Double {
+  fun avgPrice(): BigDecimal {
     return when (this.orderType) {
       OrderType.PRICE -> run {
         takeIf { this.isFinished() } ?: throw IllegalStateException("시장가 매수 주문이 완료되지 않은 상태에서, 평균매수단가를 조회했습니다.")
@@ -96,7 +98,7 @@ data class OrderResponse(
     }
   }
 
-  fun totalPrice(): Double {
+  fun totalPrice(): BigDecimal {
     return this.totalVolume() * this.avgPrice()
   }
 }
@@ -118,9 +120,9 @@ data class OrderTrade(
   @JsonProperty("market") val market: String,
   @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
-  @JsonProperty("price") val price: Double,
-  @JsonProperty("volume") val volume: Double,
-  @JsonProperty("funds") val funds: Double,
+  @JsonProperty("price") val price: BigDecimal,
+  @JsonProperty("volume") val volume: BigDecimal,
+  @JsonProperty("funds") val funds: BigDecimal,
   @JsonProperty("side") val side: String,
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime

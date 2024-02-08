@@ -6,6 +6,7 @@ import dev.lutergs.upbitclient.webclient.Requester
 import dev.lutergs.upbitclient.dto.*
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.math.BigDecimal
 import java.util.*
 
 class OrderRequester(requester: Requester) : RequestDao(requester) {
@@ -77,8 +78,8 @@ data class PlaceOrderRequest(
   val market: MarketCode,
   val type: OrderType,
   val side: OrderSide,
-  val volume: Double? = null,
-  val price: Double? = null,
+  val volume: BigDecimal? = null,
+  val price: BigDecimal? = null,
 ) : Param {
 
   init {

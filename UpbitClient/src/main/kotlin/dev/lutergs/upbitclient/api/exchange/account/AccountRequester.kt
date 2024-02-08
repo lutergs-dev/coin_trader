@@ -7,6 +7,7 @@ import dev.lutergs.upbitclient.api.RequestDao
 import dev.lutergs.upbitclient.dto.NumberStringDeserializer
 import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
+import java.math.BigDecimal
 
 class AccountRequester(requester: Requester) : RequestDao(requester) {
   fun getAccount(): Flux<AccountResponse> {
@@ -27,11 +28,11 @@ class AccountRequester(requester: Requester) : RequestDao(requester) {
 data class AccountResponse(
   @JsonProperty("currency") val currency: String,       // TODO : 추후 ENUM 으로 변경
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("balance") val balance: Double,
+  @JsonProperty("balance") val balance: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("locked") val locked: Double,
+  @JsonProperty("locked") val locked: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("avg_buy_price") val avgBuyPrice: Double,
+  @JsonProperty("avg_buy_price") val avgBuyPrice: BigDecimal,
   @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,
   @JsonProperty("unit_currency") val unitCurrency: String
 )

@@ -1,6 +1,6 @@
-package dev.lutergs.santa.trade.infra
+package dev.lutergs.santa.trade.manager.infra
 
-import dev.lutergs.santa.trade.service.AlertService
+import dev.lutergs.santa.trade.manager.service.AlertService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType

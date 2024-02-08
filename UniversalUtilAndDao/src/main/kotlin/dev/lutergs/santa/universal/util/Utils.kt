@@ -1,5 +1,7 @@
-package dev.lutergs.santa.trade.domain
+package dev.lutergs.santa.universal.util
 
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlin.random.Random
 
 
@@ -14,7 +16,13 @@ object Util {
   }
 }
 
-fun Double.toStrWithPoint(point: Int = 2): String {
+
+
+fun BigDecimal.toStrWithScale(point: Int = 2): String {
+  return this.setScale(point, RoundingMode.HALF_UP).toString()
+}
+
+fun Double.toStrWithScale(point: Int = 2): String {
   return String.format("%.${point}f", this)
 }
 

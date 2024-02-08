@@ -1,9 +1,9 @@
-package dev.lutergs.santa.trade.infra.impl
+package dev.lutergs.santa.trade.manager.infra.impl
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
-import dev.lutergs.santa.trade.domain.AlertMessageSender
-import dev.lutergs.santa.trade.domain.Message
+import dev.lutergs.santa.trade.manager.domain.AlertMessageSender
+import dev.lutergs.santa.trade.manager.domain.Message
 import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException

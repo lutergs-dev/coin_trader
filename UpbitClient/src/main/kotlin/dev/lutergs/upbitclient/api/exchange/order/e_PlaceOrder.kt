@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import dev.lutergs.upbitclient.dto.*
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -34,29 +35,30 @@ import java.util.UUID
 data class PlaceOrderResponse(
   @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
-  @JsonProperty("side") val side: String,
+  @JsonDeserialize(using = OrderSideDeserializer::class)
+  @JsonProperty("side") val side: OrderSide,
   @JsonDeserialize(using = OrderTypeDeserializer::class)
   @JsonProperty("ord_type") val orderType: OrderType,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("price") val price: Double? = null,
+  @JsonProperty("price") val price: BigDecimal? = null,
   @JsonProperty("state") val state: String,
   @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("volume") val volume: Double? = null,
+  @JsonProperty("volume") val volume: BigDecimal? = null,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("remaining_volume") val remainingVolume: Double? = null,
+  @JsonProperty("remaining_volume") val remainingVolume: BigDecimal? = null,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("reserved_fee") val reservedFee: Double,
+  @JsonProperty("reserved_fee") val reservedFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("remaining_fee") val remainingFee: Double,
+  @JsonProperty("remaining_fee") val remainingFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("paid_fee") val paidFee: Double,
+  @JsonProperty("paid_fee") val paidFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("locked") val locked: Double,
+  @JsonProperty("locked") val locked: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("executed_volume") val executedVolume: Double? = null,
+  @JsonProperty("executed_volume") val executedVolume: BigDecimal? = null,
   @JsonProperty("trades_count") val tradesCount: Int
 )

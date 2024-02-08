@@ -3,6 +3,7 @@ package dev.lutergs.upbitclient.api.quotation.candle
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import reactor.core.publisher.Flux
+import java.math.BigDecimal
 
 /**
  * 시장 캔들 정보를 나타내는 데이터 클래스
@@ -25,17 +26,17 @@ data class CandleMinuteResponse(
   @JsonProperty("market") val market: String,
   @JsonProperty("candle_date_time_utc") val candleDateTimeUtc: String,
   @JsonProperty("candle_date_time_kst") val candleDateTimeKst: String,
-  @JsonProperty("opening_price") val openingPrice: Double,
-  @JsonProperty("high_price") val highPrice: Double,
-  @JsonProperty("low_price") val lowPrice: Double,
-  @JsonProperty("trade_price") val tradePrice: Double,
-  @JsonProperty("timestamp") val timestamp: Long,
-  @JsonProperty("candle_acc_trade_price") val candleAccTradePrice: Double,
-  @JsonProperty("candle_acc_trade_volume") val candleAccTradeVolume: Double,
+  @JsonProperty("opening_price") val openingPrice: BigDecimal,
+  @JsonProperty("high_price") val highPrice: BigDecimal,
+  @JsonProperty("low_price") val lowPrice: BigDecimal,
+  @JsonProperty("trade_price") val tradePrice: BigDecimal,
+  @JsonProperty("timestamp") val timestamp: Long,   // TODO : OffsetDateTime 으로 변환
+  @JsonProperty("candle_acc_trade_price") val candleAccTradePrice: BigDecimal,
+  @JsonProperty("candle_acc_trade_volume") val candleAccTradeVolume: BigDecimal,
   @JsonProperty("unit") val unit: Int
 ) {
   companion object {
-    fun rsi(candles: List<CandleMinuteResponse>, period: Int = candles.size / 2): Double {
+    fun rsi(candles: List<CandleMinuteResponse>, period: Int = candles.size / 2): BigDecimal {
       return candles
         .sortedByDescending { it.timestamp }
         .map { it.tradePrice }
@@ -43,22 +44,22 @@ data class CandleMinuteResponse(
         .let { changes ->
           val sma = changes.subList(0, period)
             .let { smaPeriod -> Pair(
-              smaPeriod.filter { it > 0 }.sum() / smaPeriod.size,
-              smaPeriod.filter { it < 0 }.sum() / smaPeriod.size * -1.0
+              smaPeriod.filter { it > BigDecimal.ZERO }.reduce{ a, b -> a + b} / BigDecimal(smaPeriod.size),
+              (smaPeriod.filter { it < BigDecimal.ZERO }.reduce{ a, b -> a + b} / BigDecimal(smaPeriod.size)).negate()
             ) }
-          val smoothing = 2.0 / (period + 1).toDouble()
+          val smoothing = BigDecimal(2.0) / (BigDecimal(period + 1))
           changes.subList(period, changes.size)
             .fold(sma) { ema, change ->
               when {
-                change > 0 -> Pair(
-                  (change * smoothing) + (ema.first * (1.0 - smoothing)), ema.second * (1 - smoothing))
-                change < 0 -> Pair(
-                  ema.first * (1 - smoothing), ((change * -1.0) * smoothing) + (ema.second * (1.0 - smoothing)))
-                else -> Pair(ema.first * (1 - smoothing), ema.second * (1 - smoothing))
+                change > BigDecimal.ZERO -> Pair(
+                  (change * smoothing) + (ema.first * (BigDecimal(1.0) - smoothing)), ema.second * (BigDecimal(1.0) - smoothing))
+                change < BigDecimal.ZERO -> Pair(
+                  ema.first * (BigDecimal(1.0) - smoothing), ((change * BigDecimal(-1.0)) * smoothing) + (ema.second * (BigDecimal(1.0) - smoothing)))
+                else -> Pair(ema.first * (BigDecimal(1.0) - smoothing), ema.second * (BigDecimal(1.0) - smoothing))
               }
             }.let {
-              (if (it.second == 0.0) { 0.0 } else { it.first / it.second })
-                .let { rs -> 100.0 - (100.0 / (1 + rs))}
+              (if (it.second == BigDecimal.ZERO) { BigDecimal.ZERO } else { it.first / it.second })
+                .let { rs -> BigDecimal(100.0) - (BigDecimal(100.0) / (BigDecimal(1.0) + rs))}
             }
         }
     }

@@ -12,6 +12,7 @@ import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import java.math.BigDecimal
 
 @Configuration
 class SpringConfiguration {
@@ -60,14 +61,14 @@ class SpringConfiguration {
   @Bean
   fun phaseInfo(
     @Value("\${custom.trade.sell.phase1.wait-minute}") p1WaitMinute: Long,
-    @Value("\${custom.trade.sell.phase1.profit-percent}") p1ProfitPercent: Double,
-    @Value("\${custom.trade.sell.phase1.loss-percent}") p1LossPercent: Double,
+    @Value("\${custom.trade.sell.phase1.profit-percent}") p1ProfitPercent: String,
+    @Value("\${custom.trade.sell.phase1.loss-percent}") p1LossPercent: String,
     @Value("\${custom.trade.sell.phase2.wait-minute}") p2WaitMinute: Long,
-    @Value("\${custom.trade.sell.phase2.profit-percent}") p2ProfitPercent: Double,
-    @Value("\${custom.trade.sell.phase2.loss-percent}") p2LossPercent: Double,
+    @Value("\${custom.trade.sell.phase2.profit-percent}") p2ProfitPercent: String,
+    @Value("\${custom.trade.sell.phase2.loss-percent}") p2LossPercent: String,
   ): TradePhase = TradePhase(
-    Phase(p1WaitMinute, p1ProfitPercent, p1LossPercent),
-    Phase(p2WaitMinute, p2ProfitPercent, p2LossPercent)
+    Phase(p1WaitMinute, BigDecimal(p1ProfitPercent), BigDecimal(p1LossPercent)),
+    Phase(p2WaitMinute, BigDecimal(p2ProfitPercent), BigDecimal(p2LossPercent))
   )
 }
 

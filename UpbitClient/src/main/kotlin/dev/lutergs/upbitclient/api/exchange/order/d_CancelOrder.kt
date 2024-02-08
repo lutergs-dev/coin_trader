@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import dev.lutergs.upbitclient.dto.*
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -36,25 +37,25 @@ data class CancelOrderResponse(
   @JsonProperty("side") val side: String,
   @JsonProperty("ord_type") val ordType: String,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("price") val price: Double,
+  @JsonProperty("price") val price: BigDecimal,
   @JsonProperty("state") val state: String,
   @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
   @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("volume") val volume: Double,
+  @JsonProperty("volume") val volume: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("remaining_volume") val remainingVolume: Double,
+  @JsonProperty("remaining_volume") val remainingVolume: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("reserved_fee") val reservedFee: Double,
+  @JsonProperty("reserved_fee") val reservedFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("remaining_fee") val remainingFee: Double,
+  @JsonProperty("remaining_fee") val remainingFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("paid_fee") val paidFee: Double,
+  @JsonProperty("paid_fee") val paidFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("locked") val locked: Double,
+  @JsonProperty("locked") val locked: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("executed_volume") val executedVolume: Double,
+  @JsonProperty("executed_volume") val executedVolume: BigDecimal,
   @JsonProperty("trades_count") val tradesCount: Int
 )

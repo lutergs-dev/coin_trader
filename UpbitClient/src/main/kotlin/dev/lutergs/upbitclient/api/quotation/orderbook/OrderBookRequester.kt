@@ -11,9 +11,6 @@ import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlin.math.absoluteValue
-import kotlin.math.min
-import kotlin.math.roundToInt
 
 class OrderBookRequester(requester: Requester) : RequestDao(requester) {
 
@@ -38,22 +35,21 @@ data class OrderBookResponse(
   @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
   @JsonProperty("timestamp") val timestamp: Long,
-  @JsonProperty("total_ask_size") val totalAskSize: Double,
-  @JsonProperty("total_bid_size") val totalBidSize: Double,
+  @JsonProperty("total_ask_size") val totalAskSize: BigDecimal,
+  @JsonProperty("total_bid_size") val totalBidSize: BigDecimal,
   @JsonProperty("orderbook_units") val orderbookUnits: List<OrderBookUnit>
 ) {
   val step = orderbookUnits.windowed(2, 1, false) {
-    val bidDiff = (BigDecimal(it[0].bidPrice.toString()).subtract(BigDecimal(it[1].bidPrice.toString()))).abs()
-    val askDiff = (BigDecimal(it[0].askPrice.toString()).subtract(BigDecimal(it[1].askPrice.toString()))).abs()
+    val bidDiff = (it[0].bidPrice - it[1].bidPrice).abs()
+    val askDiff = (it[0].askPrice - it[1].askPrice).abs()
     bidDiff.min(askDiff)
   }.minOrNull()
     ?.stripTrailingZeros()
     ?: throw IllegalStateException("호가 리스트가 존재하지 않습니다!")
 
-  fun nearestStepPrice(price: Double): Double {
-    return BigDecimal(price)
+  fun nearestStepPrice(price: BigDecimal): BigDecimal {
+    return price
       .setScale(this.step.scale(), RoundingMode.HALF_UP)
-      .toDouble()
   }
 }
 
@@ -68,8 +64,8 @@ data class OrderBookResponse(
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderBookUnit(
-  @JsonProperty("ask_price") val askPrice: Double,
-  @JsonProperty("bid_price") val bidPrice: Double,
-  @JsonProperty("ask_size") val askSize: Double,
-  @JsonProperty("bid_size") val bidSize: Double
+  @JsonProperty("ask_price") val askPrice: BigDecimal,
+  @JsonProperty("bid_price") val bidPrice: BigDecimal,
+  @JsonProperty("ask_size") val askSize: BigDecimal,
+  @JsonProperty("bid_size") val bidSize: BigDecimal
 )

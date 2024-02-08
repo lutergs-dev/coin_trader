@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.dto.MarketCodeDeserializer
 import dev.lutergs.upbitclient.dto.NumberStringDeserializer
+import java.math.BigDecimal
 
 
 // data class of GET https://api.upbit.com/v1/orders/chance response
@@ -26,9 +27,9 @@ import dev.lutergs.upbitclient.dto.NumberStringDeserializer
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderChanceResponse(
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("bid_fee") val bidFee: Double,
+  @JsonProperty("bid_fee") val bidFee: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("ask_fee") val askFee: Double,
+  @JsonProperty("ask_fee") val askFee: BigDecimal,
   @JsonProperty("market") val market: OrderChanceMarket,
   @JsonProperty("ask_types") val askTypes: List<String> = listOf(),
   @JsonProperty("bid_types") val bidTypes: List<String> = listOf(),
@@ -59,7 +60,7 @@ data class OrderChanceMarket(
   @JsonProperty("bid") val bid: OrderChanceMarketRestriction,
   @JsonProperty("ask") val ask: OrderChanceMarketRestriction,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("max_total") val maxTotal: Double,
+  @JsonProperty("max_total") val maxTotal: BigDecimal,
   @JsonProperty("state") val state: String
 )
 
@@ -76,7 +77,7 @@ data class OrderChanceMarket(
 data class OrderChanceMarketRestriction(
   @JsonProperty("currency") val currency: String,
   @JsonProperty("price_unit") val priceUnit: String? = null,
-  @JsonProperty("min_total") val minTotal: Double
+  @JsonProperty("min_total") val minTotal: BigDecimal
 )
 
 /**
@@ -94,11 +95,11 @@ data class OrderChanceMarketRestriction(
 data class OrderChanceAccountStatus(
   @JsonProperty("currency") val currency: String,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("balance") val balance: Double,
+  @JsonProperty("balance") val balance: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("locked") val locked: Double,
+  @JsonProperty("locked") val locked: BigDecimal,
   @JsonDeserialize(using = NumberStringDeserializer::class)
-  @JsonProperty("avg_buy_price") val avgBuyPrice: Double,
+  @JsonProperty("avg_buy_price") val avgBuyPrice: BigDecimal,
   @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,
   @JsonProperty("unit_currency") val unitCurrency: String
 )

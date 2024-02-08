@@ -4,11 +4,10 @@ import dev.lutergs.santa.trade.worker.domain.*
 import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
 import dev.lutergs.santa.trade.worker.domain.entity.*
 import dev.lutergs.santa.trade.worker.infra.LoggerCreate
+import dev.lutergs.santa.universal.oracle.SellType
+import dev.lutergs.santa.universal.util.toStrWithScale
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
-import dev.lutergs.upbitclient.api.exchange.order.PlaceOrderRequest
 import dev.lutergs.upbitclient.dto.Markets
-import dev.lutergs.upbitclient.dto.OrderSide
-import dev.lutergs.upbitclient.dto.OrderType
 import dev.lutergs.upbitclient.webclient.BasicClient
 import jakarta.annotation.PostConstruct
 import org.slf4j.Logger
@@ -18,6 +17,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import java.lang.IllegalStateException
+import java.math.BigDecimal
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -44,13 +44,14 @@ class WorkerService(
         if (it.sell == null) { this.phase2(it) }
         else { Mono.just(it) }
       }.flatMap { this.alarmSender.sendTradeResult(it.toMsg()) }
-      .subscribe { this.closeApplication() }
+      .doOnTerminate { this.closeApplication() }
+      .subscribe()
   }
 
   fun buyCoin(): Mono<TradeResult> {
-    return this.trader.buyMarket(this.mainTrade.market, this.mainTrade.money.toDouble())
+    return this.trader.buyMarket(this.mainTrade.market, BigDecimal(this.mainTrade.money))
       .doOnNext {
-        this.originLogger.info("코인 구매가 완료되었습니다. 대상 코인 : ${it.buy.market}, 가격: ${it.buy.avgPrice()}, 구매량: ${it.buy.totalVolume().toStrWithPoint(3)}, 총금액: ${this.mainTrade.money.toDouble()}")
+        this.originLogger.info("코인 구매가 완료되었습니다. 대상 코인 : ${it.buy.market}, 가격: ${it.buy.avgPrice()}, 구매량: ${it.buy.totalVolume().toStrWithScale(3)}, 총금액: ${it.buy.totalPrice().toStrWithScale()}")
         this.originLogger.info("구매 주문 UUID: ${it.buy.uuid}")
       }
   }
@@ -67,8 +68,8 @@ class WorkerService(
 
         this.trader.placeSellLimit(tradeResult, profitPrice)
           .doOnNext { logger.info("코인의 이득점을 설정했습니다. " +
-            "가격 : ${profitPrice.toStrWithPoint()}, 총금액 : ${(it.buy.totalVolume() * profitPrice).toStrWithPoint()}. " +
-            "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithPoint()} (이득주문점) 혹은 ${lossPrice.toStrWithPoint()} (손실점) 에 도달하면 판매합니다.")
+            "가격 : ${profitPrice.toStrWithScale()}, 총금액 : ${(it.buy.totalVolume() * profitPrice).toStrWithScale()}. " +
+            "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithScale()} (이득주문점) 혹은 ${lossPrice.toStrWithScale()} (손실점) 에 도달하면 판매합니다.")
           }.flatMap { tr ->
             // 지정 초에 한 번씩 가격과 오더 상태를 같이 확인함
             Mono.zip(
@@ -80,11 +81,11 @@ class WorkerService(
               when {
                 // 이득주문 완료시
                 firstSellOrder.isFinished() -> tradeResult.completeSellOrder(firstSellOrder, SellType.PROFIT)
-                  .let { this.trader.finishSellOrder(it) }
+                  .let { this.trader.finishSellLimit(it) }
                   .doOnNext { logger.info("코인을 이득을 보고 매도했습니다.") }
                 // 손실점 도달시
                 currentPrice <= lossPrice -> {
-                  logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithPoint()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
+                  logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithScale()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
                   this.trader.cancelSellLimit(tr)
                     .doOnNext { logger.info("코인 매도 주문을 취소했습니다. 현재 가격으로 매도합니다.") }
                     .flatMap { this.trader.sellMarket(tradeResult, SellType.LOSS) }
@@ -127,17 +128,17 @@ class WorkerService(
 
         when {
           currentPrice >= profitPrice -> this.trader.sellMarket(tradeResult, SellType.STOP_PROFIT)
-            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithPoint(2)}원보다 높습니다 (${currentPrice}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithScale(2)}원보다 높습니다 (${currentPrice}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.") }
           currentPrice <= lossPrice -> this.trader.sellMarket(tradeResult, SellType.STOP_LOSS)
-            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toStrWithPoint(2)}원보다 낮습니다 (${currentPrice}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toStrWithScale(2)}원보다 낮습니다 (${currentPrice}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.") }
           else -> Mono.empty()
         }
       }.repeatWhenEmpty((this.tradePhase.phase2.waitMinute * 60 / this.watchIntervalSecond).toInt()) {
         it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
       }.onErrorResume(IllegalStateException::class.java) {
-        logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithPoint(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
+        logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithScale(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
         this.client.ticker.getTicker(Markets.fromMarket(tradeResult.buy.market)).next()
           .flatMap { ticker ->
             val type = if (ticker.tradePrice > tradeResult.buy.avgPrice()) SellType.TIMEOUT_PROFIT else SellType.TIMEOUT_LOSS
@@ -147,7 +148,7 @@ class WorkerService(
       }
   }
 
-  private fun logCurrentStatus(tradeResult: TradeResult, phase: Phase, currentPrice: Double, profitPrice: Double? = null, logger: Logger) {
+  private fun logCurrentStatus(tradeResult: TradeResult, phase: Phase, currentPrice: BigDecimal, profitPrice: BigDecimal? = null, logger: Logger) {
     LocalDateTime.now()
       .takeIf { it.second < this.watchIntervalSecond }
       ?.let {
@@ -157,10 +158,10 @@ class WorkerService(
             val minutes = d.toMinutes() % 60
             val secs = d.seconds % 60
             logger.info(
-              "이득가: ${profitPrice?.toStrWithPoint(2) ?: phase.getProfitPrice(tradeResult.buy.avgPrice()).toStrWithPoint(2)}, " +
-              "손실가: ${phase.getLossPrice(tradeResult.buy.avgPrice()).toStrWithPoint(2)}, " +
-              "현재가: ${currentPrice.toStrWithPoint(2)}, " +
-              "구매가: ${tradeResult.buy.avgPrice().toStrWithPoint(2)} " +
+              "이득가: ${profitPrice?.toStrWithScale(2) ?: phase.getProfitPrice(tradeResult.buy.avgPrice()).toStrWithScale(2)}, " +
+              "손실가: ${phase.getLossPrice(tradeResult.buy.avgPrice()).toStrWithScale(2)}, " +
+              "현재가: ${currentPrice.toStrWithScale(2)}, " +
+              "구매가: ${tradeResult.buy.avgPrice().toStrWithScale(2)} " +
               "경과시간: $hours 시간 $minutes 분 $secs 초")
           }
       }

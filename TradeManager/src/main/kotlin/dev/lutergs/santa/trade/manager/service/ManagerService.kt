@@ -1,6 +1,8 @@
-package dev.lutergs.santa.trade.service
+package dev.lutergs.santa.trade.manager.service
 
-import dev.lutergs.santa.trade.domain.*
+import dev.lutergs.santa.trade.manager.domain.*
+import dev.lutergs.santa.universal.util.subListOrAll
+import dev.lutergs.santa.universal.util.toStrWithScale
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteRequest
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteResponse
 import dev.lutergs.upbitclient.api.quotation.market.MarketWarning
@@ -12,9 +14,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.math.BigDecimal
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.roundToInt
+import java.util.concurrent.atomic.AtomicLong
 
 class ManagerService(
   private val alertService: AlertService,
@@ -25,7 +27,7 @@ class ManagerService(
 ) {
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
 
-  @KafkaListener(topics = ["trade-result"])
+  @KafkaListener(topics = ["\${custom.kafka.topic.trade-result}"])
   fun consume(record: ConsumerRecord<String, String>) {
     // consume 뜻 --> 거래 완료되었고, 이제 돈이 다시 있다.
     this.initWorker().blockLast()
@@ -35,15 +37,15 @@ class ManagerService(
     return this.upbitClient.account.getAccount()
       .filter { it.currency == "KRW" }
       .next()
-      .flatMap { Mono.just(it.balance.roundToInt() - 1000) }
+      .flatMap { Mono.just(it.balance.setScale(0).toLong() - 1000) }
       .flatMapMany { totalRawMoney ->
         val workerCount = (totalRawMoney / this.workerConfig.initMaxMoney)
           .let { if (totalRawMoney % this.workerConfig.initMaxMoney >= this.workerConfig.initMinMoney) it + 1 else it }
-        if (workerCount == 0) {
+        if (workerCount == 0L) {
           this.logger.info("코인이 팔렸지만, 현재 가진 금액 (${totalRawMoney}) 이 최소거래값 (${this.workerConfig.initMinMoney}) 보다 적어 거래하지 않습니다.")
           Flux.just(false)
         } else {
-          val totalMoney = AtomicInteger(totalRawMoney)
+          val totalMoney = AtomicLong(totalRawMoney)
           this.findApplicableCoin(workerCount)
 
             // TODO : 해당 로직 리팩터링 필요
@@ -78,7 +80,7 @@ class ManagerService(
       }
   }
 
-  private fun findApplicableCoin(coinCount: Int): Mono<List<TickerResponse>> {
+  private fun findApplicableCoin(coinCount: Long): Mono<List<TickerResponse>> {
     if (coinCount < 0) throw IllegalArgumentException("코인 개수는 0 이상의 값을 지정해야 합니다")
     return this.upbitClient.market.getMarketCode()
 
@@ -95,7 +97,7 @@ class ManagerService(
 
       // 2. 최근 24시간 거래량이 큰 순으로, 25개 선별
       .flatMapMany { this.upbitClient.ticker.getTicker(it) }
-      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt() }
+      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).setScale(0).toInt() }
       .take(25, true)
       .delayElements(Duration.ofMillis(200))    // 업비트 API Timeout 고려
 
@@ -105,12 +107,12 @@ class ManagerService(
       // 4. 호가 계산 우선순위에 따라 걸러질 수 있게 우선순위 재정렬
       .flatMap { ticker -> this.getPriority(ticker)
         .flatMap { p -> Mono.fromCallable { Pair(ticker, p) } }
-      }.sort { o1, o2 -> (o2.second - o1.second).roundToInt() }
+      }.sort { o1, o2 -> (o2.second - o1.second).setScale(0).toInt() }
       .collectList()
 
       // 5. 최근 거래 중, phase 1 에서 손실을 본 코인 판별
       .flatMap { coinList ->
-        this.logger.info("거래 가능한 코인 중, 우선순위에 의거한 상위 ${coinList.size}개 코인은 다음과 같습니다 : ${coinList.map { "${it.first.market.quote}(${it.second.toStrWithPoint()})" }}")
+        this.logger.info("거래 가능한 코인 중, 우선순위에 의거한 상위 ${coinList.size}개 코인은 다음과 같습니다 : ${coinList.map { "${it.first.market.quote}(${it.second.toStrWithScale()})" }}")
         this.dangerCoinRepository.getDangerCoins()
           .collectList()
           .flatMap { dangerCoinList ->
@@ -125,7 +127,7 @@ class ManagerService(
       .flatMap { coinList -> when {
         coinCount <= 2 -> coinList.subListOrAll(6)
           .also { this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 6개의 코인을 선택합니다. ") }
-        coinCount <= 5 -> coinList.subListOrAll(coinCount * 3)
+        coinCount <= 5 -> coinList.subListOrAll((coinCount * 3).toInt())
           .also { this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 ${coinCount * 3}개의 코인을 선택합니다.") }
         else -> coinList.subListOrAll(15)
           .also { this.logger.info("선별할 코인 개수가 ${coinCount}개이기 때문에, 후보군으로 최대 15개의 코인을 선택합니다.") }
@@ -133,11 +135,11 @@ class ManagerService(
       .doOnNext { this.logger.info("최종으로 선발된 후보 코인은 다음과 같습니다 : ${it.map { t -> t.market.quote }}") }
 
       // 7. 랜덤으로 Worker 의 개수만큼 코인 최종 결정
-      .flatMap { Mono.just(it.shuffled().take(coinCount)) }
+      .flatMap { Mono.just(it.shuffled().take(coinCount.toInt())) }
       .doOnNext { this.logger.info("거래할 최종 코인은 ${it.map { d -> d.market.quote }} 입니다.") }
   }
 
-  private fun getPriority(ticker: TickerResponse): Mono<Double> {
+  private fun getPriority(ticker: TickerResponse): Mono<BigDecimal> {
     /**
      * BID ASK (bid 가 사는거, ask 가 파는거)
      * 호가를 기준으로, 1호가부터 가중치를 둬서 비교 판단
@@ -152,8 +154,8 @@ class ManagerService(
       .flatMap { orderbook ->
         val length = orderbook.orderbookUnits.size
         orderbook.orderbookUnits
-          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((length - idx) / length) }
-          .sum()
+          .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((BigDecimal(length) - BigDecimal(idx)) / BigDecimal(length)) }
+          .reduce {a, b -> a + b}
           .let { Mono.just(it) }
       }
   }
@@ -170,8 +172,8 @@ class ManagerService(
         var result = true
 
         // rule 1
-        if (candles.maxOf { it.highPrice } >= ticker.tradePrice * 2 &&
-          candles.minOf { it.lowPrice } >= ticker.tradePrice * 0.8
+        if (candles.maxOf { it.highPrice } >= ticker.tradePrice * BigDecimal(2) &&
+          candles.minOf { it.lowPrice } >= ticker.tradePrice * BigDecimal(0.8)
         ) {
           result = false
           this.logger.info("코인 ${ticker.market.quote} 은 6시간동안의 고가가 현재가 기준 2배 이상, 저가가 현재가 기준 80% 이상이어서 거래하지 않습니다.")
@@ -179,9 +181,9 @@ class ManagerService(
 
         // rule 2
         val rsi = CandleMinuteResponse.rsi(candles)
-        if (rsi >= 80.0 || rsi <= 20.0) {
+        if (rsi >= BigDecimal(80.0) || rsi <= BigDecimal(20.0)) {
           result = false
-          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithPoint()} (80 이상 혹은 20 이하) 이어서 거래하지 않습니다.")
+          this.logger.info("코인 ${ticker.market.quote} 은 RSI 지수가 ${rsi.toStrWithScale()} (80 이상 혹은 20 이하) 이어서 거래하지 않습니다.")
         }
 
         Mono.just(result)

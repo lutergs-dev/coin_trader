@@ -45,11 +45,11 @@ jobs:
 
       - name: Build JAR (manager)
         run: |
-          gradle TradeManager:bootJar
+          gradle -Dadd-opens=java.base/java.nio=ALL-UNNAMED TradeManager:bootJar
 
       - name: Build JAR (worker)
         run: |
-          gradle TradeWorker:bootJar
+          gradle -Dadd-opens=java.base/java.nio=ALL-UNNAMED TradeWorker:bootJar
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

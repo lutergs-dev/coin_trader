@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.0.11"
+version = "0.0.1"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -20,22 +20,24 @@ repositories {
 }
 
 dependencies {
-  api("org.springframework.boot:spring-boot-starter-webflux:3.2.2")
-//    api("io.projectreactor.netty:reactor-netty-http:1.1.15")
-  api("io.projectreactor:reactor-core:3.6.2")
-  api("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
-  api("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
+  api("org.springframework.boot:spring-boot-starter-data-r2dbc:3.2.2")
 
-  api("com.fasterxml.jackson.core:jackson-core:2.16.1")
+  // trade result data store
+  api("com.oracle.database.r2dbc:oracle-r2dbc:1.2.0")
+  api("io.r2dbc:r2dbc-pool:1.0.1.RELEASE")
+  api("io.r2dbc:r2dbc-spi:1.0.0.RELEASE")
+  api("com.oracle.database.jdbc:ojdbc11:21.11.0.0")
+
+  // coin time-base data store
+  api("com.influxdb:influxdb3-java:0.5.1")
+
   api("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
 
+  api("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
   api("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
+  api("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
 
-  api("com.auth0:java-jwt:4.4.0")
-
-  testApi("org.springframework.boot:spring-boot-starter-test")
-  testApi("junit:junit:4.13.2")
-  testApi("org.junit.jupiter:junit-jupiter-api:5.10.1")
+  testApi("org.springframework.boot:spring-boot-starter-test:3.2.2")
   testApi("io.projectreactor:reactor-test:3.5.4")
 }
 

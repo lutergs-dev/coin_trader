@@ -35,12 +35,10 @@ custom:
       name: ${KUBERNETES_IMAGE_NAME:coin-trade-worker}
     env-secret-name: ${KUBERNETES_ENV_SECRET_NAME:env-secret-name}
     kube-config-location: ${KUBERNETES_KUBECONFIG_LOCATION:/var/kube/config}
-  db:
-    descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
-    username: ${ORACLE_USERNAME:'username'}
-    password: ${ORACLE_PASSWORD:'password'}
-    max-conn: ${ORACLE_MAX_CONN:3}
-    min-conn: ${ORACLE_MIN_CONN:1}
+  kafka:
+    topic:
+      trade-result: ${KAFKA_TRADE_RESULT_TOPIC:'trade-result'}
+      danger-coin: ${KAFKA_DANGER_COIN_TOPIC:'danger-coin-alert'}
   message-sender:
     url: ${MESSAGE_SENDER_URL:'url'}
     topic: ${MESSAGE_SENDER_TOPIC:'topic'}

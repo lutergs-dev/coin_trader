@@ -1,4 +1,4 @@
-package dev.lutergs.santa.trade.domain
+package dev.lutergs.santa.trade.manager.domain
 
 import dev.lutergs.upbitclient.dto.MarketCode
 import reactor.core.publisher.Flux
@@ -10,9 +10,8 @@ interface DangerCoinRepository {
   fun getDangerCoins(): Flux<String>
 }
 
-interface TradeHistoryRepository {
-  fun getTradeHistoryBetweenDatetime(startAt: OffsetDateTime, endAt: OffsetDateTime): Flux<CompleteOrderResult>
-  fun getTradeHistoryAfter(datetime: OffsetDateTime): Flux<CompleteOrderResult>
+interface CompleteOrderResultRepository {
+  fun getCompleteOrderResultAfter(datetime: OffsetDateTime): Flux<CompleteOrderResult>
 }
 
 interface AlertMessageSender {
@@ -20,5 +19,5 @@ interface AlertMessageSender {
 }
 
 interface WorkerController {
-  fun initWorker(workerConfig: WorkerConfig, market: MarketCode, price: Int): Boolean
+  fun initWorker(workerConfig: WorkerConfig, market: MarketCode, price: Long): Boolean
 }

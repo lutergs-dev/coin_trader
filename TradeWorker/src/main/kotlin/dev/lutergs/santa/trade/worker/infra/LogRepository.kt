@@ -1,114 +1,20 @@
 package dev.lutergs.santa.trade.worker.infra
 
-import com.fasterxml.jackson.annotation.JsonIgnore
-import dev.lutergs.santa.trade.worker.domain.entity.SellType
+import dev.lutergs.santa.universal.oracle.SellType
+import dev.lutergs.santa.universal.oracle.TradeHistory
+import dev.lutergs.santa.universal.oracle.TradeHistoryRepository
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
-import org.springframework.data.annotation.Id
-import org.springframework.data.annotation.Transient
-import org.springframework.data.domain.Persistable
-import org.springframework.data.relational.core.mapping.Column
-import org.springframework.data.relational.core.mapping.Table
-import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Component
-import org.springframework.stereotype.Repository
 import reactor.core.publisher.Mono
-import reactor.util.retry.Retry
-import java.io.Serializable
-import java.time.Duration
-import java.time.OffsetDateTime
 import java.util.*
 
 
-@Table(name = "coin_trade_order_list")
-class OrderEntity: Persistable<String>, Serializable {
-  @Column(value = "coin") var coin: String? = null
-
-  /* need index */@Id @Column(value = "buy_uuid") var buyId: String? = null  // main buy order id
-  @Column(value = "buy_price") var buyPrice: Double? = null
-  @Column(value = "buy_fee") var buyFee: Double? = null
-  @Column(value = "buy_volume") var buyVolume: Double? = null
-  @Column(value = "buy_won") var buyWon: Double? = null
-  @Column(value = "buy_place_at") var buyPlaceAt: OffsetDateTime? = null
-  @Column(value = "buy_finish_at") var buyFinishAt: OffsetDateTime? = null
-
-  /* need index */ @Column(value = "sell_uuid") var sellId: String? = null
-  @Column(value = "sell_price") var sellPrice: Double? = null
-  @Column(value = "sell_fee") var sellFee: Double? = null
-  @Column(value = "sell_volume") var sellVolume: Double? = null
-  @Column(value = "sell_won") var sellWon: Double? = null
-  @Column(value = "sell_place_at") var sellPlaceAt: OffsetDateTime? = null
-  @Column(value = "sell_finish_at") var sellFinishAt: OffsetDateTime? = null
-
-  @Column(value = "profit") var profit: Double? = null
-  @Column(value = "sell_type") var sellType: String? = null
-
-  @Transient @JsonIgnore private var newInstance: Boolean = false
-
-  override fun getId(): String? {
-    return this.buyId
-  }
-
-  override fun isNew(): Boolean {
-    return this.newInstance
-  }
-
-  fun setNewInstance() {
-    this.newInstance = true
-  }
-
-  override fun toString(): String {
-    return "OrderEntity(coin=$coin, buyId=$buyId, buyPrice=$buyPrice, buyFee=$buyFee, buyVolume=$buyVolume, buyWon=$buyWon, buyPlaceAt=$buyPlaceAt, buyFinishAt=$buyFinishAt, sellId=$sellId, sellPrice=$sellPrice, sellFee=$sellFee, sellVolume=$sellVolume, sellWon=$sellWon, sellPlaceAt=$sellPlaceAt, sellFinishAt=$sellFinishAt, profit=$profit, newInstance=$newInstance)"
-  }
-
-}
-
-@Repository
-interface OrderEntityReactiveRepository: ReactiveCrudRepository<OrderEntity, String>
-
 @Component
 class LogRepository(
-  private val repository: OrderEntityReactiveRepository
+  private val repository: TradeHistoryRepository
 ) {
-  private val logger = LoggerCreate.createLogger(this::class)
-
-  private fun retryFindById(id: String): Mono<OrderEntity> {
-    return this.repository.findById(id)
-      .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
-      .doOnError { this.logger.error("error occured when find entity! id = $id", it) }
-  }
-
-  private fun retrySave(entity: OrderEntity): Mono<OrderEntity> {
-    return this.repository.save(entity)
-      .retryWhen(Retry.fixedDelay(5,Duration.ofSeconds(1)))
-      .doOnError { this.logger.error("error occured when save entity! entity = $entity", it) }
-  }
-
-  // new buy order
-  fun newBuyOrder(response: OrderResponse): Mono<OrderResponse> {
-    return OrderEntity()
-      .apply {
-        this.coin = response.market.quote
-        this.buyId = response.uuid.toString()
-        this.buyPrice = response.avgPrice()
-        this.buyFee = response.reservedFee
-        this.buyVolume = response.totalVolume()
-        this.buyWon = response.avgPrice() * response.totalVolume() - response.reservedFee
-        this.buyPlaceAt = response.createdAt
-        this.setNewInstance()
-      }.let { this.retrySave(it).thenReturn(response) }
-  }
-
-  fun finishBuyOrder(response: OrderResponse): Mono<OrderResponse> {
-    return this.retryFindById(response.uuid.toString())
-      .flatMap {
-        it.buyFinishAt = response.trades.maxOf { d -> d.createdAt }
-        this.retrySave(it)
-      }.thenReturn(response)
-  }
-
-  // 시장가로 거래할 때 사용
-  fun completeBuyOrder(response: OrderResponse): Mono<OrderResponse> {
-    return OrderEntity()
+  fun newLogWithBuyResult(response: OrderResponse): Mono<OrderResponse> {
+    return TradeHistory()
       .apply {
         this.coin = response.market.quote
         this.buyId = response.uuid.toString()
@@ -119,68 +25,38 @@ class LogRepository(
         this.buyPlaceAt = response.createdAt
         this.buyFinishAt = response.trades.maxOf { d -> d.createdAt }
         this.setNewInstance()
-      }.let { this.retrySave(it).thenReturn(response) }
+      }.let { this.repository.save(it).thenReturn(response) }
   }
 
-  fun placeSellOrder(response: OrderResponse, buyUuid: UUID): Mono<OrderResponse> {
-    return this.retryFindById(buyUuid.toString())
-      .flatMap {
-        it.sellId = response.uuid.toString()
-        it.sellPrice = response.avgPrice()
-        it.sellVolume = response.totalVolume()
-        it.sellFee = response.paidFee
-        it.sellWon = response.avgPrice() * response.totalVolume() - it.sellFee!!
-        it.sellPlaceAt = response.createdAt
-        this.retrySave(it)
-      }.thenReturn(response)
-  }
-
-  fun finishSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
-    return this.retryFindById(buyResponse.uuid.toString())
-      .flatMap {
-        if (it.sellId != sellResponse.uuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
-        else {
-          it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
-          it.profit = (sellResponse.avgPrice() * sellResponse.totalVolume()) - (buyResponse.avgPrice() * buyResponse.totalVolume()) - (buyResponse.paidFee + sellResponse.paidFee)
-          it.sellType = sellType.name
-          it.sellFee = sellResponse.paidFee
-          this.retrySave(it).thenReturn(sellResponse)
-        }
-      }
-  }
-
-  // 시장가로 거래할 때 사용
-  fun completeSellOrder(buyResponse: OrderResponse, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
-    return this.retryFindById(buyResponse.uuid.toString())
+  fun updateLogWithSellResult(buyUUID: UUID, sellResponse: OrderResponse, sellType: SellType): Mono<OrderResponse> {
+    return this.repository.findById(buyUUID.toString())
       .flatMap {
         it.sellId = sellResponse.uuid.toString()
-        it.sellPrice = sellResponse.avgPrice()
-        it.sellVolume = sellResponse.totalVolume()
+        it.sellPrice = if (sellResponse.isFinished()) sellResponse.avgPrice() else null
         it.sellFee = sellResponse.paidFee
-        it.sellWon = sellResponse.avgPrice() * sellResponse.totalVolume() - it.sellFee!!
+        it.sellVolume = if (sellResponse.isFinished()) sellResponse.totalVolume() else null
+        it.sellWon = if (sellResponse.isFinished()) sellResponse.totalPrice() else null
         it.sellPlaceAt = sellResponse.createdAt
-        it.sellFinishAt = sellResponse.trades.maxOf { d -> d.createdAt }
-        it.profit = (sellResponse.avgPrice() * sellResponse.totalVolume()) - (buyResponse.avgPrice() * buyResponse.totalVolume()) - (buyResponse.paidFee + sellResponse.paidFee)
-        it.sellType = sellType.name
-        it.sellFee = sellResponse.paidFee
-        this.retrySave(it).thenReturn(sellResponse)
+        it.sellFinishAt = sellResponse.trades.maxOfOrNull { t -> t.createdAt }
+        it.profit = if (sellResponse.isFinished()) it.sellWon!! - it.buyWon else null
+        it.sellType = sellType
+        this.repository.save(it).thenReturn(sellResponse)
       }
   }
 
-  fun cancelSellOrder(sellUuid: UUID, buyUuid: UUID): Mono<Void> {
-    return this.retryFindById(buyUuid.toString())
-      .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(2)))
+  fun updateLogWithEmptySellResult(buyUUID: UUID): Mono<Void> {
+    return this.repository.findById(buyUUID.toString())
       .flatMap {
-        if (it.sellId != sellUuid.toString()) Mono.error(IllegalStateException("잘못된 주문을 요청했습니다."))
-        else {
-          it.sellId = null
-          it.sellPrice = null
-          it.sellFee = null
-          it.sellVolume = null
-          it.sellWon = null
-          it.sellPlaceAt = null
-          this.retrySave(it).then(Mono.empty())
-        }
+        it.sellId = null
+        it.sellPrice = null
+        it.sellFee = null
+        it.sellVolume = null
+        it.sellWon = null
+        it.sellPlaceAt = null
+        it.sellFinishAt = null
+        it.profit = null
+        it.sellType = SellType.NULL
+        this.repository.save(it).then()
       }
   }
 }

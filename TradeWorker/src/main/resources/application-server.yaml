@@ -10,12 +10,6 @@ custom:
     topic:
       alarm: ${KAFKA_ALARM_TOPIC_NAME:alarm}
       trade-result: ${KAFKA_TRADE_RESULT_NAME:trade-result}
-  db:
-    descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
-    username: ${ORACLE_USERNAME:'username'}
-    password: ${ORACLE_PASSWORD:'password'}
-    max-conn: ${ORACLE_MAX_CONN:3}
-    min-conn: ${ORACLE_MIN_CONN:1}
   trade:
     start-market: ${START_MARKET:KRW-BTC}
     start-money: ${START_MONEY:10000}

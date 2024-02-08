@@ -54,8 +54,7 @@ class Requester(
       .retrieve()
       .bodyToMono(String::class.java)
       .doOnError (WebClientResponseException::class.java) {
-        println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
-      }
+        println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")      }
   }
 
   fun <T : Any> getSingle(path: String, param: Param? = null, responseClass: KClass<T>): Mono<T> {

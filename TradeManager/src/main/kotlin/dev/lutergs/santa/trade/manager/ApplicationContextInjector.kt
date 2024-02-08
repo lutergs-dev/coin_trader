@@ -1,4 +1,4 @@
-package dev.lutergs.santa.trade
+package dev.lutergs.santa.trade.manager
 
 import io.kubernetes.client.openapi.Configuration
 import io.kubernetes.client.util.Config

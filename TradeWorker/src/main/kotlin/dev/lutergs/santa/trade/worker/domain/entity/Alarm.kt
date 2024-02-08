@@ -1,6 +1,7 @@
 package dev.lutergs.santa.trade.worker.domain.entity
 
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
+import java.math.BigDecimal
 import java.util.*
 
 
@@ -31,7 +32,7 @@ data class TradeResultMessage(
 
 data class TradeResultMsgKey(
   val uuid: UUID,
-  val profit: Double
+  val profit: BigDecimal
 )
 
 data class TradeResultMsgValue(

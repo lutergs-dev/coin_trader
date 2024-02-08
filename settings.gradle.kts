@@ -1,5 +1,6 @@
 rootProject.name = "santa"
 
-include("UpbitClient")
-include("TradeWorker")
 include("TradeManager")
+include("TradeWorker")
+include("UniversalUtilAndDao")
+include("UpbitClient")
