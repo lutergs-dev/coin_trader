@@ -16,6 +16,7 @@ import org.springframework.kafka.annotation.KafkaListener
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
@@ -38,7 +39,7 @@ class ManagerService(
     return this.upbitClient.account.getAccount()
       .filter { it.currency == "KRW" }
       .next()
-      .flatMap { Mono.just(it.balance.setScale(0).toLong() - 1000) }
+      .flatMap { Mono.just(it.balance.setScale(0, RoundingMode.HALF_UP).toLong() - 1000) }
       .flatMapMany { totalRawMoney ->
         val workerCount = (totalRawMoney / this.workerConfig.initMaxMoney)
           .let { if (totalRawMoney % this.workerConfig.initMaxMoney >= this.workerConfig.initMinMoney) it + 1 else it }
@@ -98,7 +99,7 @@ class ManagerService(
 
       // 2. 최근 24시간 거래량이 큰 순으로, 25개 선별
       .flatMapMany { this.upbitClient.ticker.getTicker(it) }
-      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).setScale(0).toInt() }
+      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).setScale(0, RoundingMode.HALF_UP).toInt() }
       .take(25, true)
       .delayElements(Duration.ofMillis(200))    // 업비트 API Timeout 고려
 
@@ -108,7 +109,7 @@ class ManagerService(
       // 4. 호가 계산 우선순위에 따라 걸러질 수 있게 우선순위 재정렬
       .flatMap { ticker -> this.getPriority(ticker)
         .flatMap { p -> Mono.fromCallable { Pair(ticker, p) } }
-      }.sort { o1, o2 -> (o2.second - o1.second).setScale(0).toInt() }
+      }.sort { o1, o2 -> (o2.second - o1.second).setScale(0, RoundingMode.HALF_UP).toInt() }
       .collectList()
 
       // 5. 최근 거래 중, phase 1 에서 손실을 본 코인 판별
