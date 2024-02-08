@@ -51,7 +51,7 @@ class WorkerService(
   fun buyCoin(): Mono<TradeResult> {
     return this.trader.buyMarket(this.mainTrade.market, BigDecimal(this.mainTrade.money))
       .doOnNext {
-        this.originLogger.info("코인 구매가 완료되었습니다. 대상 코인 : ${it.buy.market}, 가격: ${it.buy.avgPrice()}, 구매량: ${it.buy.totalVolume().toStrWithScale(3)}, 총금액: ${it.buy.totalPrice().toStrWithScale()}")
+        this.originLogger.info("코인 구매가 완료되었습니다. 대상 코인 : ${it.buy.market}, 가격: ${it.buy.avgPrice().toPlainString()}, 구매량: ${it.buy.totalVolume().toStrWithScale(3)}, 총금액: ${it.buy.totalPrice().toStrWithScale()}")
         this.originLogger.info("구매 주문 UUID: ${it.buy.uuid}")
       }
   }
@@ -68,7 +68,7 @@ class WorkerService(
 
         this.trader.placeSellLimit(tradeResult, profitPrice)
           .doOnNext { logger.info("코인의 이득점을 설정했습니다. " +
-            "가격 : ${profitPrice.toStrWithScale()}, 총금액 : ${(it.buy.totalVolume() * profitPrice).toStrWithScale()}. " +
+            "가격 : ${profitPrice.toStrWithScale()}, 총금액 : ${it.buy.totalPrice().toStrWithScale()}. " +
             "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithScale()} (이득주문점) 혹은 ${lossPrice.toStrWithScale()} (손실점) 에 도달하면 판매합니다.")
           }.flatMap { tr ->
             // 지정 초에 한 번씩 가격과 오더 상태를 같이 확인함

@@ -22,12 +22,13 @@ data class Phase(
   val profitPercent: BigDecimal,
   val lossPercent: BigDecimal
 ) {
+
   fun getProfitPrice(price: BigDecimal): BigDecimal {
     return price * (BigDecimal(1.0) + (this.profitPercent * BigDecimal(0.01)))
   }
 
   fun getLossPrice(price: BigDecimal): BigDecimal {
-    return price * (BigDecimal(1.0) + (this.lossPercent * BigDecimal(0.01)))
+    return price * (BigDecimal(1.0) - (this.lossPercent * BigDecimal(0.01)))
   }
 }
 

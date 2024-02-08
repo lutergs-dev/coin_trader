@@ -80,7 +80,7 @@ data class OrderResponse(
       }
       OrderType.MARKET -> this.volume!!
       OrderType.LIMIT -> this.volume!!
-    }
+    }.stripTrailingZeros()
   }
 
 
@@ -95,11 +95,11 @@ data class OrderResponse(
         (this.trades.sumOf { it.price * it.volume }) / (this.trades.sumOf { it.volume })
       }
       OrderType.LIMIT -> this.price!!
-    }
+    }.stripTrailingZeros()
   }
 
   fun totalPrice(): BigDecimal {
-    return this.totalVolume() * this.avgPrice()
+    return (this.totalVolume() * this.avgPrice()).stripTrailingZeros()
   }
 }
 

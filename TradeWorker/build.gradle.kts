@@ -3,13 +3,13 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
   id("org.springframework.boot") version "3.2.2"
   id("io.spring.dependency-management") version "1.1.4"
-//  id("org.graalvm.buildtools.native") version "0.9.28"
+  id("org.graalvm.buildtools.native") version "0.9.28"
   kotlin("jvm") version "1.9.21"
   kotlin("plugin.spring") version "1.9.21"
 }
 
 group = "dev.lutergs"
-version = "0.0.28"
+version = "0.0.29"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -23,12 +23,8 @@ dependencies {
   implementation(project(":UpbitClient"))
   implementation(project(":UniversalUtilAndDao"))
 
-  implementation("org.springframework.boot:spring-boot-autoconfigure:3.2.2")
   implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.2")
   implementation("org.springframework.kafka:spring-kafka:3.0.10")
-
-  // coin time-base data store
-  implementation("com.influxdb:influxdb3-java:0.5.1")
 
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
 

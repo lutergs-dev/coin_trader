@@ -38,7 +38,11 @@ class LogRepository(
         it.sellWon = if (sellResponse.isFinished()) sellResponse.totalPrice() else null
         it.sellPlaceAt = sellResponse.createdAt
         it.sellFinishAt = sellResponse.trades.maxOfOrNull { t -> t.createdAt }
-        it.profit = if (sellResponse.isFinished()) it.sellWon!! - it.buyWon else null
+        it.profit = if (sellResponse.isFinished()) {
+          it.sellWon!! - it.buyWon - (it.sellFee!! + it.buyFee)
+        } else {
+          null
+        }
         it.sellType = sellType
         this.repository.save(it).thenReturn(sellResponse)
       }

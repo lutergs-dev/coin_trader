@@ -106,16 +106,16 @@ data class PlaceOrderRequest(
 
   override fun toParameterString(): String {
     return when (this.type) {
-      OrderType.LIMIT -> "${market.toParameterString()}&side=${this.side.name.lowercase()}&volume=$volume&price=$price&ord_type=${type.name.lowercase()}"
-      OrderType.PRICE -> "${market.toParameterString()}&side=${this.side.name.lowercase()}&price=$price&ord_type=${type.name.lowercase()}"
+      OrderType.LIMIT -> "${market.toParameterString()}&side=${this.side.name.lowercase()}&volume=${this.volume?.toPlainString()}&price=${this.price?.toPlainString()}&ord_type=${type.name.lowercase()}"
+      OrderType.PRICE -> "${market.toParameterString()}&side=${this.side.name.lowercase()}&price=${this.price?.toPlainString()}&ord_type=${type.name.lowercase()}"
       OrderType.MARKET -> "${market.toParameterString()}&side=ask&volume=$volume&ord_type=${type.name.lowercase()}"
     }
   }
 
   override fun toJwtTokenString(): String {
     return when (this.type) {
-      OrderType.LIMIT -> "${market.toJwtTokenString()}&side=${this.side.name.lowercase()}&volume=$volume&price=$price&ord_type=${type.name.lowercase()}"
-      OrderType.PRICE -> "${market.toJwtTokenString()}&side=${this.side.name.lowercase()}&price=$price&ord_type=${type.name.lowercase()}"
+      OrderType.LIMIT -> "${market.toJwtTokenString()}&side=${this.side.name.lowercase()}&volume=${this.volume?.toPlainString()}&price=${this.price?.toPlainString()}&ord_type=${type.name.lowercase()}"
+      OrderType.PRICE -> "${market.toJwtTokenString()}&side=${this.side.name.lowercase()}&price=${this.price?.toPlainString()}&ord_type=${type.name.lowercase()}"
       OrderType.MARKET -> "${market.toJwtTokenString()}&side=ask&volume=$volume&ord_type=${type.name.lowercase()}"
     }
   }
