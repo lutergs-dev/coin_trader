@@ -104,7 +104,11 @@ enum class SellType {
 
 // Enum을 String으로 변환하는 컨버터
 @WritingConverter
-class SellTypeToStringConverter : EnumWriteSupport<SellType>()
+class SellTypeToStringConverter : Converter<SellType, String> {
+  override fun convert(source: SellType): String {
+    return source.name
+  }
+}
 
 // String을 Enum으로 변환하는 컨버터
 @ReadingConverter

@@ -17,6 +17,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.mongodb.repository.config.EnableReactiveMongoRepositories
 import org.springframework.data.r2dbc.config.AbstractR2dbcConfiguration
+import org.springframework.data.r2dbc.convert.R2dbcCustomConversions
+import org.springframework.data.r2dbc.dialect.OracleDialect
+import org.springframework.data.r2dbc.dialect.R2dbcDialect
 import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories
 
 /**
@@ -99,11 +102,12 @@ class UniversalDataConfig(
       }
   }
 
-  override fun getCustomConverters(): List<Any> {
-    return listOf(
+  @Bean
+  fun customConversions(): R2dbcCustomConversions {
+    return R2dbcCustomConversions.of(OracleDialect.INSTANCE, listOf(
       SellTypeToStringConverter(),
       StringToSellTypeConverter()
-    )
+    ))
   }
 
   @Bean
