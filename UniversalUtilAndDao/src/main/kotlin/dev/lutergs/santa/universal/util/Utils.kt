@@ -22,6 +22,10 @@ fun BigDecimal.toStrWithScale(point: Int = 2): String {
   return this.setScale(point, RoundingMode.HALF_UP).toString()
 }
 
+fun BigDecimal.toStrWithStripTrailing(): String {
+  return this.stripTrailingZeros().toPlainString()
+}
+
 fun Double.toStrWithScale(point: Int = 2): String {
   return String.format("%.${point}f", this)
 }

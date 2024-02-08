@@ -6,6 +6,7 @@ import dev.lutergs.santa.trade.worker.domain.entity.*
 import dev.lutergs.santa.trade.worker.infra.LoggerCreate
 import dev.lutergs.santa.universal.oracle.SellType
 import dev.lutergs.santa.universal.util.toStrWithScale
+import dev.lutergs.santa.universal.util.toStrWithStripTrailing
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import java.lang.IllegalStateException
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.Duration
 import java.time.LocalDateTime
 
@@ -68,8 +70,8 @@ class WorkerService(
 
         this.trader.placeSellLimit(tradeResult, profitPrice)
           .doOnNext { logger.info("코인의 이득점을 설정했습니다. " +
-            "가격 : ${profitPrice.toStrWithScale()}, 총금액 : ${it.buy.totalPrice().toStrWithScale()}. " +
-            "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithScale()} (이득주문점) 혹은 ${lossPrice.toStrWithScale()} (손실점) 에 도달하면 판매합니다.")
+            "가격 : ${profitPrice.toStrWithStripTrailing()}, 총금액 : ${it.buy.totalPrice().toStrWithStripTrailing()}. " +
+            "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithStripTrailing()} (이득주문점) 혹은 ${lossPrice.toStrWithStripTrailing()} (손실점) 에 도달하면 판매합니다.")
           }.flatMap { tr ->
             // 지정 초에 한 번씩 가격과 오더 상태를 같이 확인함
             Mono.zip(
@@ -85,7 +87,7 @@ class WorkerService(
                   .doOnNext { logger.info("코인을 이득을 보고 매도했습니다.") }
                 // 손실점 도달시
                 currentPrice <= lossPrice -> {
-                  logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithScale()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
+                  logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithStripTrailing()}% 이상 손해를 보고 있습니다. 현재 가격으로 매도합니다.")
                   this.trader.cancelSellLimit(tr)
                     .doOnNext { logger.info("코인 매도 주문을 취소했습니다. 현재 가격으로 매도합니다.") }
                     .flatMap { this.trader.sellMarket(tradeResult, SellType.LOSS) }
@@ -128,10 +130,10 @@ class WorkerService(
 
         when {
           currentPrice >= profitPrice -> this.trader.sellMarket(tradeResult, SellType.STOP_PROFIT)
-            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithScale(2)}원보다 높습니다 (${currentPrice}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithStripTrailing()}원보다 높습니다 (${currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.") }
           currentPrice <= lossPrice -> this.trader.sellMarket(tradeResult, SellType.STOP_LOSS)
-            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toStrWithScale(2)}원보다 낮습니다 (${currentPrice}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.setScale(profitPrice.scale(), RoundingMode.HALF_UP).toStrWithStripTrailing()}원보다 낮습니다 (${currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.") }
           else -> Mono.empty()
         }
@@ -158,10 +160,10 @@ class WorkerService(
             val minutes = d.toMinutes() % 60
             val secs = d.seconds % 60
             logger.info(
-              "이득가: ${profitPrice?.toStrWithScale(2) ?: phase.getProfitPrice(tradeResult.buy.avgPrice()).toStrWithScale(2)}, " +
-              "손실가: ${phase.getLossPrice(tradeResult.buy.avgPrice()).toStrWithScale(2)}, " +
-              "현재가: ${currentPrice.toStrWithScale(2)}, " +
-              "구매가: ${tradeResult.buy.avgPrice().toStrWithScale(2)} " +
+              "이득가: ${profitPrice?.toStrWithStripTrailing() ?: phase.getProfitPrice(tradeResult.buy.avgPrice()).setScale(currentPrice.scale() + 2, RoundingMode.HALF_UP).toStrWithStripTrailing()}, " +
+              "손실가: ${phase.getLossPrice(tradeResult.buy.avgPrice()).setScale(currentPrice.scale() + 2, RoundingMode.HALF_UP).toStrWithStripTrailing()}, " +
+              "현재가: ${currentPrice.toStrWithStripTrailing()}, " +
+              "구매가: ${tradeResult.buy.avgPrice().setScale(currentPrice.scale() + 2, RoundingMode.HALF_UP).toStrWithStripTrailing()} " +
               "경과시간: $hours 시간 $minutes 분 $secs 초")
           }
       }
