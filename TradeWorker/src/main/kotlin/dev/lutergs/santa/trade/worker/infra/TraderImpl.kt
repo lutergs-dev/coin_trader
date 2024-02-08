@@ -43,7 +43,7 @@ class TraderImpl (
 
   // 지정가 매도 주문 실행
   override fun placeSellLimit(tradeResult: TradeResult, price: BigDecimal): Mono<TradeResult> {
-    return PlaceOrderRequest(tradeResult.buy.market, OrderType.LIMIT, OrderSide.ASK, tradeResult.buy.totalVolume(), price)
+    return PlaceOrderRequest(tradeResult.buy.market, OrderType.LIMIT, OrderSide.ASK, tradeResult.buy.totalVolume(), price.stripTrailingZeros())
       .let { this.client.order.placeOrder(it) }
       .flatMap { this.client.order.getOrder(OrderRequest(it.uuid)) }
       .flatMap { this.repository.updateLogWithSellResult(tradeResult.buy.uuid, it, SellType.PLACED) }
