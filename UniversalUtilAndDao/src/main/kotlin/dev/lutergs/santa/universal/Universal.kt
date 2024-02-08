@@ -9,6 +9,8 @@ import io.r2dbc.spi.ConnectionFactories
 import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.ConnectionFactoryOptions
 import oracle.r2dbc.OracleR2dbcOptions
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
+import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -71,8 +73,9 @@ data class InfluxConfig(
 
 
 @Configuration
-@EnableR2dbcRepositories("dev.lutergs.santa.universal")
-@EnableReactiveMongoRepositories("dev.lutergs.santa.universal")
+@EnableAutoConfiguration(exclude = [R2dbcAutoConfiguration::class])
+@EnableR2dbcRepositories(value = ["dev.lutergs.santa"])
+@EnableReactiveMongoRepositories(value = ["dev.lutergs.santa"])
 @EnableConfigurationProperties(value = [InfluxConfig::class, OracleConfig::class])
 class UniversalDataConfig(
   private val oracleConfig: OracleConfig,
