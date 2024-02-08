@@ -120,7 +120,7 @@ class WorkerService(
    * 한시간 반 동안, 구매 가격보다 높으면 무조건 매매
    * */
   fun phase2(tradeResult: TradeResult, logger: Logger = this.p2Logger): Mono<TradeResult> {
-    logger.info("지금부터 구매평균가의 ${this.tradePhase.phase2.profitPercent}% 이상 이득을 보거나, ${this.tradePhase.phase2.lossPercent} 이하로 손실을 볼 경우 매매합니다.")
+    logger.info("지금부터 구매평균가의 ${this.tradePhase.phase2.profitPercent}% 이상 이득을 보거나, ${this.tradePhase.phase2.lossPercent}% 이하로 손실을 볼 경우 매매합니다.")
     val (profitPrice, lossPrice) = tradeResult.buy.avgPrice()
       .let { this.tradePhase.phase2.getProfitPrice(it) to this.tradePhase.phase2.getLossPrice(it) }
     return Mono.defer { this.client.ticker.getTicker(Markets.fromMarket(tradeResult.buy.market)).next() }
