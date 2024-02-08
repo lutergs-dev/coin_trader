@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.DangerCoinMessage
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResultMessage
+import dev.lutergs.santa.universal.mongo.DangerCoinRepository
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
@@ -19,7 +20,8 @@ class MessageSenderKafkaProxyImpl(
   kafkaApiSecret: String,
   private val alarmTopicName: String,
   private val tradeResultTopicName: String,
-  private val objectMapper: ObjectMapper
+  private val objectMapper: ObjectMapper,
+  private val dangerCoinRepository: DangerCoinRepository
 ): MessageSender {
   private val webClient = WebClient.builder()
     .baseUrl("$kafkaProxyUrl/kafka/v3/clusters/$kafkaClusterName/topics")
@@ -33,7 +35,8 @@ class MessageSenderKafkaProxyImpl(
   private val logger = LoggerCreate.createLogger(this::class)
 
   override fun sendAlarm(msg: DangerCoinMessage): Mono<KafkaMessageResponse> {
-    return this.sendPost("/${this.alarmTopicName}/records", KafkaMessage(msg.key, msg.value))
+    return this.dangerCoinRepository.setDangerCoin(msg.key.coinName)
+      .then(this.sendPost("/${this.alarmTopicName}/records", KafkaMessage(msg.key, msg.value)))
   }
 
   override fun sendTradeResult(msg: TradeResultMessage): Mono<KafkaMessageResponse> {

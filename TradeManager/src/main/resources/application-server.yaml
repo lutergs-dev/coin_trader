@@ -1,9 +1,9 @@
 spring:
-  application:
-    name: "CoinTraderManager"
   data:
     mongodb:
       uri: mongodb+srv://${MONGO_USERNAME:'username'}:${MONGO_PASSWORD:'password'}@${MONGO_URL:'url'}/${MONGO_DATABASE:'db'}?retryWrites=true&w=majority
+  application:
+    name: "CoinTraderManager"
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-server}
     listener:
@@ -44,3 +44,16 @@ custom:
     topic: ${MESSAGE_SENDER_TOPIC:'topic'}
     username: ${MESSAGE_SENDER_USERNAME:'username'}
     password: ${MESSAGE_SENDER_PASSWORD:'password'}
+
+universal:
+  db:
+    oracle:
+      descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
+      username: ${ORACLE_USERNAME:'username'}
+      password: ${ORACLE_PASSWORD:'password'}
+      max-conn: ${ORACLE_MAX_CONN:3}
+      min-conn: ${ORACLE_MIN_CONN:1}
+    influx:
+      host-url: ${INFLUX_HOST_URL:'http://localhost'}
+      token: ${INFLUX_TOKEN:'abc'}
+      database: ${INFLUX_DATABASE:'database'}

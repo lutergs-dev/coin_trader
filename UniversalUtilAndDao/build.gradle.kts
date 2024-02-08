@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.0.1"
+version = "0.0.2"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -30,6 +30,9 @@ dependencies {
 
   // coin time-base data store
   api("com.influxdb:influxdb3-java:0.5.1")
+
+  // danger-coin data store
+  api("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.0.4")
 
   api("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
 

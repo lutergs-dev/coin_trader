@@ -5,6 +5,7 @@ import dev.lutergs.santa.trade.manager.infra.impl.AlertMessageSenderImpl
 import dev.lutergs.santa.trade.manager.domain.*
 import dev.lutergs.santa.trade.manager.service.AlertService
 import dev.lutergs.santa.trade.manager.service.ManagerService
+import dev.lutergs.santa.universal.mongo.DangerCoinRepository
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean

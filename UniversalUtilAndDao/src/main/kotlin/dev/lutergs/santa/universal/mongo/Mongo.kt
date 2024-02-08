@@ -1,6 +1,5 @@
-package dev.lutergs.santa.trade.manager.infra.impl
+package dev.lutergs.santa.universal.mongo
 
-import dev.lutergs.santa.trade.manager.domain.DangerCoinRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed
@@ -13,12 +12,13 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.time.Duration
-import java.util.Date
+import java.util.*
 
 
 @Document("danger_coins")
 class DangerCoinEntity {
-  @Id var id: String? = null
+  @Id
+  var id: String? = null
 
   @Field
   @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 12)
@@ -33,12 +33,12 @@ class DangerCoinEntity {
 interface DangerCoinEntityRepository: ReactiveMongoRepository<DangerCoinEntity, String>
 
 @Component
-class DangerCoinRepositoryImpl(
+class DangerCoinRepository(
   private val repository: DangerCoinEntityRepository
-): DangerCoinRepository {
-  private val logger = LoggerFactory.getLogger(DangerCoinRepositoryImpl::class.java)
+) {
+  private val logger = LoggerFactory.getLogger(this::class.java)
 
-  override fun setDangerCoin(coinName: String): Mono<String> {
+  fun setDangerCoin(coinName: String): Mono<String> {
     return DangerCoinEntity()
       .apply { this.coinName = coinName }
       .let { this.repository.save(it)
@@ -48,7 +48,7 @@ class DangerCoinRepositoryImpl(
       }
   }
 
-  override fun getDangerCoins(): Flux<String> {
+  fun getDangerCoins(): Flux<String> {
     return this.repository.findAll()
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when find danger coins!", it) }

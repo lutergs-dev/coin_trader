@@ -2,6 +2,7 @@ package dev.lutergs.santa.trade.manager.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.manager.domain.*
+import dev.lutergs.santa.universal.mongo.DangerCoinRepository
 import dev.lutergs.santa.universal.oracle.SellType
 import dev.lutergs.santa.universal.util.toStrWithScale
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -51,10 +52,7 @@ class AlertService(
   fun consume(record: ConsumerRecord<String, String>) {
     this.objectMapper.readTree(record.key())
       .path("coinName").asText()
-      .let { Mono.zip(
-        this.dangerCoinRepository.setDangerCoin(it),
-        this.messageSender.sendMessage(Message.createDangerCoinMessage(this.topicName, it))
-      ) }
+      .let { this.messageSender.sendMessage(Message.createDangerCoinMessage(this.topicName, it)) }
       .block()
   }
 

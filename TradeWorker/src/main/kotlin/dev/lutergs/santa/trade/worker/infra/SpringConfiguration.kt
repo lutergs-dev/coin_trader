@@ -7,6 +7,7 @@ import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
 import dev.lutergs.santa.trade.worker.domain.entity.TradePhase
 import dev.lutergs.santa.trade.worker.domain.entity.Phase
+import dev.lutergs.santa.universal.mongo.DangerCoinRepository
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
@@ -36,7 +37,8 @@ class SpringConfiguration {
     @Value("\${custom.kafka.api.secret}") kafkaApiSecret: String,
     @Value("\${custom.kafka.topic.alarm}") alarmTopicName: String,
     @Value("\${custom.kafka.topic.trade-result}") tradeResultTopicName: String,
-    objectMapper: ObjectMapper
+    objectMapper: ObjectMapper,
+    dangerCoinRepository: DangerCoinRepository
   ): MessageSender = MessageSenderKafkaProxyImpl(
     kafkaProxyUrl = kafkaUrl,
     kafkaClusterName = kafkaClusterName,
@@ -44,7 +46,8 @@ class SpringConfiguration {
     kafkaApiSecret = kafkaApiSecret,
     alarmTopicName = alarmTopicName,
     tradeResultTopicName = tradeResultTopicName,
-    objectMapper = objectMapper
+    objectMapper = objectMapper,
+    dangerCoinRepository = dangerCoinRepository
   )
 
   @Bean

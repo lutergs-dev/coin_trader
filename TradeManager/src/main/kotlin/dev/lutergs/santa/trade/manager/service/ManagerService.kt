@@ -1,6 +1,7 @@
 package dev.lutergs.santa.trade.manager.service
 
 import dev.lutergs.santa.trade.manager.domain.*
+import dev.lutergs.santa.universal.mongo.DangerCoinRepository
 import dev.lutergs.santa.universal.util.subListOrAll
 import dev.lutergs.santa.universal.util.toStrWithScale
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteRequest
