@@ -23,6 +23,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 @Service
 class WorkerService(
@@ -66,14 +67,15 @@ class WorkerService(
     return this.client.orderBook.getOrderBook(Markets.fromMarket(tradeResult.buy.market))
       .next()
       .flatMap { orderbook ->
-        val profitPrice = this.tradePhase.phase1.getProfitPrice(tradeResult.buy.avgPrice())
-          .let { OrderStep.calculateOrderStepPrice(it) }
-        val lossPrice = this.tradePhase.phase1.getLossPrice(tradeResult.buy.avgPrice())
-
+        val (profitPrice, lossPrice, buyPrice) = tradeResult.buy.avgPrice().let { Triple(
+          OrderStep.calculateOrderStepPrice(this.tradePhase.phase1.getProfitPrice(it)),
+          OrderStep.calculateOrderStepPrice(this.tradePhase.phase1.getLossPrice(it)),
+          OrderStep.calculateOrderStepPrice(it)
+        )}
         this.trader.placeSellLimit(tradeResult, profitPrice)
           .doOnNext { logger.info("코인의 이득점을 설정했습니다. " +
-            "가격 : ${profitPrice.toStrWithStripTrailing()}, 총금액 : ${it.buy.totalPrice().toStrWithStripTrailing()}. " +
-            "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toStrWithStripTrailing()} (이득주문점) 혹은 ${lossPrice.toStrWithStripTrailing()} (손실점) 에 도달하면 판매합니다.")
+            "가격 : ${profitPrice.toPlainString()}, 총금액 : ${it.buy.totalPrice().toStrWithScale(4)}. " +
+            "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toPlainString()} (이득주문점) 혹은 ${lossPrice.toPlainString()} (손실점) 에 도달하면 판매합니다.")
           }.flatMap { tr ->
             // 지정 초에 한 번씩 가격과 오더 상태를 같이 확인함
             Mono.zip(
@@ -81,7 +83,7 @@ class WorkerService(
               Mono.defer { this.client.ticker.getTicker(Markets.fromMarket(tr.sell!!.market)).next() }
             ).flatMap { tp ->
               val (firstSellOrder, currentPrice) = tp.t1 to tp.t2.tradePrice
-              this.logCurrentStatus(tradeResult, this.tradePhase.phase1, currentPrice, profitPrice, logger)
+              this.logCurrentStatus(tradeResult.buy.createdAt, profitPrice, lossPrice, currentPrice, buyPrice, logger)
               when {
                 // 이득주문 완료시
                 firstSellOrder.isFinished() -> tradeResult.completeSellOrder(firstSellOrder, SellType.PROFIT)
@@ -123,19 +125,22 @@ class WorkerService(
    * */
   fun phase2(tradeResult: TradeResult, logger: Logger = this.p2Logger): Mono<TradeResult> {
     logger.info("지금부터 구매평균가의 ${this.tradePhase.phase2.profitPercent}% 이상 이득을 보거나, ${this.tradePhase.phase2.lossPercent}% 이하로 손실을 볼 경우 매매합니다.")
-    val (profitPrice, lossPrice) = tradeResult.buy.avgPrice()
-      .let { this.tradePhase.phase2.getProfitPrice(it) to this.tradePhase.phase2.getLossPrice(it) }
+    val (profitPrice, lossPrice, buyPrice) = tradeResult.buy.avgPrice().let { Triple(
+      OrderStep.calculateOrderStepPrice(this.tradePhase.phase2.getProfitPrice(it)),
+      OrderStep.calculateOrderStepPrice(this.tradePhase.phase2.getLossPrice(it)),
+      OrderStep.calculateOrderStepPrice(it)
+    )}
     return Mono.defer { this.client.ticker.getTicker(Markets.fromMarket(tradeResult.buy.market)).next() }
       .flatMap { ticker ->
         val currentPrice = ticker.tradePrice
-        this.logCurrentStatus(tradeResult, this.tradePhase.phase2, currentPrice, logger = logger)
+        this.logCurrentStatus(tradeResult.buy.createdAt, profitPrice, lossPrice, currentPrice, buyPrice, logger)
 
         when {
           currentPrice >= profitPrice -> this.trader.sellMarket(tradeResult, SellType.STOP_PROFIT)
-            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithStripTrailing()}원보다 높습니다 (${currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toPlainString()}원보다 높습니다 (${currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.") }
           currentPrice <= lossPrice -> this.trader.sellMarket(tradeResult, SellType.STOP_LOSS)
-            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.setScale(profitPrice.scale(), RoundingMode.HALF_UP).toStrWithStripTrailing()}원보다 낮습니다 (${currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toPlainString()}원보다 낮습니다 (${currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.") }
           else -> Mono.empty()
         }
@@ -152,20 +157,18 @@ class WorkerService(
       }
   }
 
-  private fun logCurrentStatus(tradeResult: TradeResult, phase: Phase, currentPrice: BigDecimal, profitPrice: BigDecimal? = null, logger: Logger) {
+  private fun logCurrentStatus(dt: OffsetDateTime, profit: BigDecimal, loss: BigDecimal, current: BigDecimal, buy: BigDecimal, logger: Logger) {
     LocalDateTime.now()
       .takeIf { it.second < this.watchIntervalSecond }
       ?.let {
-        Duration.between(tradeResult.buy.createdAt.toLocalDateTime(), it)
+        Duration.between(dt.toLocalDateTime(), it)
           .let { d ->
             val hours = d.toHours()
             val minutes = d.toMinutes() % 60
             val secs = d.seconds % 60
             logger.info(
-              "이득가: ${profitPrice?.toStrWithStripTrailing() ?: phase.getProfitPrice(tradeResult.buy.avgPrice()).setScale(currentPrice.scale() + 2, RoundingMode.HALF_UP).toStrWithStripTrailing()}, " +
-              "손실가: ${phase.getLossPrice(tradeResult.buy.avgPrice()).setScale(currentPrice.scale() + 2, RoundingMode.HALF_UP).toStrWithStripTrailing()}, " +
-              "현재가: ${currentPrice.toStrWithStripTrailing()}, " +
-              "구매가: ${tradeResult.buy.avgPrice().setScale(currentPrice.scale() + 2, RoundingMode.HALF_UP).toStrWithStripTrailing()} " +
+              "이득가: ${profit.toPlainString()}, 손실가: ${loss.toPlainString()}, " +
+              "현재가: ${current.toPlainString()}, 구매가: ${buy.toPlainString()} " +
               "경과시간: $hours 시간 $minutes 분 $secs 초")
           }
       }
