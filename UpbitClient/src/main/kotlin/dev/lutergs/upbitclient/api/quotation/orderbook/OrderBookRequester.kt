@@ -38,20 +38,7 @@ data class OrderBookResponse(
   @JsonProperty("total_ask_size") val totalAskSize: BigDecimal,
   @JsonProperty("total_bid_size") val totalBidSize: BigDecimal,
   @JsonProperty("orderbook_units") val orderbookUnits: List<OrderBookUnit>
-) {
-  val step = orderbookUnits.windowed(2, 1, false) {
-    val bidDiff = (it[0].bidPrice - it[1].bidPrice).abs()
-    val askDiff = (it[0].askPrice - it[1].askPrice).abs()
-    bidDiff.min(askDiff)
-  }.minOrNull()
-    ?.stripTrailingZeros()
-    ?: throw IllegalStateException("호가 리스트가 존재하지 않습니다!")
-
-  fun nearestStepPrice(price: BigDecimal): BigDecimal {
-    return price
-      .setScale(this.step.scale(), RoundingMode.HALF_UP)
-  }
-}
+)
 
 /**
  * 개별 호가 단위를 나타내는 데이터 클래스
@@ -69,3 +56,32 @@ data class OrderBookUnit(
   @JsonProperty("ask_size") val askSize: BigDecimal,
   @JsonProperty("bid_size") val bidSize: BigDecimal
 )
+
+/***
+ * 업데이트된 호가 계산 방식 도입 https://docs.upbit.com/docs/market-info-trade-price-detail
+ *
+ */
+object OrderStep {
+  fun calculateOrderStepPrice(price: BigDecimal): BigDecimal {
+    return when {
+      price >= BigDecimal(2000000) -> price.setScale(-3, RoundingMode.HALF_UP)
+      price >= BigDecimal(1000000) -> (price / BigDecimal(500))
+        .setScale(0, RoundingMode.HALF_UP)
+        .let { it * BigDecimal(500) }
+      price >= BigDecimal(500000) -> price.setScale(-2, RoundingMode.HALF_UP)
+      price >= BigDecimal(100000) -> (price / BigDecimal(50))
+        .setScale(0, RoundingMode.HALF_UP)
+        .let { it * BigDecimal(50) }
+      price >= BigDecimal(10000) -> price.setScale(-1, RoundingMode.HALF_UP)
+      price >= BigDecimal(1000) -> price.setScale(0, RoundingMode.HALF_UP)
+      price >= BigDecimal(100) -> price.setScale(1, RoundingMode.HALF_UP)
+      price >= BigDecimal(10) -> price.setScale(2, RoundingMode.HALF_UP)
+      price >= BigDecimal(1) -> price.setScale(3, RoundingMode.HALF_UP)
+      price >= BigDecimal(0.1) -> price.setScale(4,RoundingMode.HALF_UP)
+      price >= BigDecimal(0.01) -> price.setScale(5, RoundingMode.HALF_UP)
+      price >= BigDecimal(0.001) -> price.setScale(6, RoundingMode.HALF_UP)
+      price >= BigDecimal(0.0001) -> price.setScale(7, RoundingMode.HALF_UP)
+      else -> price.setScale(8, RoundingMode.HALF_UP)
+    }.stripTrailingZeros()
+  }
+}

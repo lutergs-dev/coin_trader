@@ -57,7 +57,7 @@ class TestBasicClient {
       .flatMap { mcr -> Mono.fromCallable { Markets(mcr.map { it.market }) } }
       .flatMapMany { this.basicClient.ticker.getTicker(it) }
       .sort { o1, o2 ->
-        (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt()
+        (o2.accTradePrice24h - o1.accTradePrice24h).toInt()
       }
       .take(25, true)
       .delayElements(Duration.ofMillis(200))
@@ -122,7 +122,7 @@ class TestBasicClient {
       .collectList()
       .flatMap { mcr -> Mono.fromCallable { Markets(mcr.map { it.market }) } }
       .flatMapMany { this.basicClient.ticker.getTicker(it) }
-      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt() }
+      .sort { o1, o2 -> (o2.accTradePrice24h - o1.accTradePrice24h).toInt() }
       .flatMap {
         println(it)
         Mono.just(it)
@@ -130,16 +130,15 @@ class TestBasicClient {
       .next()
       .flatMap {
         // TODO : 주문최소단위를 결정하는 것이 중요함. Orderbook 을 보고 호가 간을 비교하는것이 가장 적절할 것이라 생각함.
-        val buyPrice = (it.tradePrice * 0.8).toInt()
-        val buyVolumeKRW = 20000
-        val buyVolume = (buyVolumeKRW.toDouble() / buyPrice.toDouble())
-          .let { v -> BigDecimal(v).setScale(6, RoundingMode.HALF_UP).toDouble() }
+        val buyPrice = (it.tradePrice * BigDecimal(0.8))
+        val buyVolumeKRW = BigDecimal(20000)
+        val buyVolume = (buyVolumeKRW / buyPrice)
         PlaceOrderRequest(
           market = it.market,
           type = OrderType.LIMIT,
           side = OrderSide.BID,
           volume = buyVolume,
-          price = buyPrice.toDouble(),
+          price = buyPrice,
         ).let { req -> this.basicClient.order.placeOrder(req) }
       }
       .flatMapMany {
@@ -182,7 +181,7 @@ class TestBasicClient {
 
   @Test
   fun `시장가 매수 매도 DTO 출력 테스트`() {
-    PlaceOrderRequest(MarketCode("KRW", "BTC"), OrderType.PRICE, OrderSide.BID, price = 10000.0)
+    PlaceOrderRequest(MarketCode("KRW", "BTC"), OrderType.PRICE, OrderSide.BID, price = BigDecimal(10000.0))
       .let { this.basicClient.order.testPlaceOrder(it) }
       .flatMap {
         println("first price buy order result : $it")
@@ -237,14 +236,13 @@ class TestBasicClient {
       .flatMap { mcr -> Mono.fromCallable { Markets(mcr.map { it.market }) } }
       .flatMapMany { this.basicClient.ticker.getTicker(it) }
       .sort { o1, o2 ->
-        (o2.accTradePrice24h - o1.accTradePrice24h).roundToInt()
+        (o2.accTradePrice24h - o1.accTradePrice24h).toInt()
       }
       .take(25, true)
       .delayElements(Duration.ofMillis(400))
       .flatMap { this.basicClient.orderBook.getOrderBook(Markets.fromMarket(it.market)) }
       .flatMap {
         println("Coin is ${it.market.quote}, value is ${it.orderbookUnits[0].bidPrice}, ${it.orderbookUnits[1].bidPrice}")
-        println("step is : ${it.step}, value if 9999.16534819 is round to ${it.nearestStepPrice(9999.16534819)}")
         Mono.just(it)
       }
       .blockLast()

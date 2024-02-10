@@ -8,6 +8,7 @@ import dev.lutergs.santa.universal.oracle.SellType
 import dev.lutergs.santa.universal.util.toStrWithScale
 import dev.lutergs.santa.universal.util.toStrWithStripTrailing
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
+import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
 import jakarta.annotation.PostConstruct
@@ -65,7 +66,8 @@ class WorkerService(
     return this.client.orderBook.getOrderBook(Markets.fromMarket(tradeResult.buy.market))
       .next()
       .flatMap { orderbook ->
-        val profitPrice = this.tradePhase.phase1.getProfitPrice(tradeResult.buy.avgPrice()).let { orderbook.nearestStepPrice(it) }
+        val profitPrice = this.tradePhase.phase1.getProfitPrice(tradeResult.buy.avgPrice())
+          .let { OrderStep.calculateOrderStepPrice(it) }
         val lossPrice = this.tradePhase.phase1.getLossPrice(tradeResult.buy.avgPrice())
 
         this.trader.placeSellLimit(tradeResult, profitPrice)
