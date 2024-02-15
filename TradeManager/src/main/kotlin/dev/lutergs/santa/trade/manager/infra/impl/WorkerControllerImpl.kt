@@ -1,10 +1,9 @@
 package dev.lutergs.santa.trade.manager.infra.impl
 
-import dev.lutergs.santa.trade.manager.domain.KubernetesInfo
-import dev.lutergs.santa.trade.manager.domain.WorkerConfig
+import dev.lutergs.santa.trade.manager.domain.entity.WorkerConfig
 import dev.lutergs.santa.trade.manager.domain.WorkerController
-import dev.lutergs.santa.universal.util.Util
-import dev.lutergs.santa.universal.util.toStrWithScale
+import dev.lutergs.santa.util.Util
+import dev.lutergs.santa.util.toStrWithScale
 import dev.lutergs.upbitclient.dto.MarketCode
 import io.kubernetes.client.openapi.ApiException
 import io.kubernetes.client.openapi.apis.BatchV1Api
@@ -12,7 +11,16 @@ import io.kubernetes.client.openapi.models.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
-@Component
+
+data class KubernetesInfo(
+  val namespace: String,
+  val imagePullSecretName: String,
+  val imagePullPolicy: String,
+  val imageName: String,
+  val envSecretName: String
+)
+
+
 class WorkerControllerImpl(
   private val kubernetesInfo: KubernetesInfo
 ): WorkerController {

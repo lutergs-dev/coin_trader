@@ -1,8 +1,9 @@
 package dev.lutergs.santa.trade.worker.infra
 
 import dev.lutergs.santa.trade.worker.domain.Trader
-import dev.lutergs.santa.trade.worker.domain.entity.TradeResult
-import dev.lutergs.santa.universal.oracle.SellType
+import dev.lutergs.santa.trade.worker.domain.entity.WorkerTradeResult
+import dev.lutergs.santa.util.SellType
+import dev.lutergs.santa.util.toStrWithStripTrailing
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
 import dev.lutergs.upbitclient.api.exchange.order.PlaceOrderRequest
@@ -10,65 +11,103 @@ import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.dto.OrderSide
 import dev.lutergs.upbitclient.dto.OrderType
 import dev.lutergs.upbitclient.webclient.BasicClient
-import org.springframework.stereotype.Component
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Duration
 import java.util.*
 
-@Component
 class TraderImpl (
-  private val repository: LogRepository,
-  private val client: BasicClient
+  private val kafkaProxyMessageSender: KafkaProxyMessageSender,
+  private val topicName: String,
+  private val client: BasicClient,
+  watchIntervalSecond: Long,
 ): Trader {
-  private val waitWatchSecond: Duration = Duration.ofSeconds(1)
+  private val waitWatchSecond: Duration = Duration.ofSeconds(watchIntervalSecond)
+  private val logger = LoggerFactory.getLogger(TraderImpl::class.java)
 
   // 현재 보유한 코인을 시장가로 판매
-  override fun sellMarket(tradeResult: TradeResult, sellType: SellType): Mono<TradeResult> {
+  override fun sellMarket(tradeResult: WorkerTradeResult, sellType: SellType): Mono<WorkerTradeResult> {
     return PlaceOrderRequest(tradeResult.buy.market, OrderType.MARKET, OrderSide.ASK, volume = tradeResult.buy.totalVolume())
-      .let { req -> this.client.order.placeOrder(req)
-        .flatMap { this.waitOrderUntilComplete(it.uuid) }
-        .flatMap { this.repository.updateLogWithSellResult(tradeResult.buy.uuid, it, sellType) }
-      }.flatMap { Mono.fromCallable { tradeResult.completeSellOrder(it, sellType) } }
+      .let { req ->
+        this.client.order.placeOrder(req)
+          .flatMap { this.waitOrderUntilComplete(it.uuid) }
+          .flatMap { Mono.fromCallable { tradeResult.completeSellOrder(it, sellType) } }
+          .doOnNext {  }
+          .flatMap {
+            this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
+              .thenReturn(it)
+              .onErrorResume { err ->
+                this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${tradeResult}, sellType: ${sellType.name}", err)
+                Mono.fromCallable { it }
+              }
+          }
+      }
   }
 
   // 코인을 시장가로 구매 후 TradeResult 변환
-  override fun buyMarket(market: MarketCode, money: BigDecimal): Mono<TradeResult> {
+  override fun buyMarket(market: MarketCode, money: BigDecimal): Mono<WorkerTradeResult> {
     return PlaceOrderRequest(market, OrderType.PRICE, OrderSide.BID, price = money)
       .let { req -> this.client.order.placeOrder(req)
         .flatMap { this.waitOrderUntilComplete(it.uuid) }
-        .flatMap { this.repository.newLogWithBuyResult(it) }
-      }.flatMap { Mono.fromCallable { TradeResult.createFromBuy(it) } }
+        .flatMap { Mono.fromCallable { WorkerTradeResult(it) } }
+        .flatMap {
+          this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
+            .thenReturn(it)
+            .onErrorResume { err ->
+              this.logger.error("시장가 구매 Kafka 전송시 에러가 발생했습니다! market : ${market}, money: ${money.toStrWithStripTrailing()}", err)
+              Mono.fromCallable { it }
+            }
+        }
+      }
   }
 
   // 지정가 매도 주문 실행
-  override fun placeSellLimit(tradeResult: TradeResult, price: BigDecimal): Mono<TradeResult> {
+  override fun placeSellLimit(tradeResult: WorkerTradeResult, price: BigDecimal): Mono<WorkerTradeResult> {
     return PlaceOrderRequest(tradeResult.buy.market, OrderType.LIMIT, OrderSide.ASK, tradeResult.buy.totalVolume(), price.stripTrailingZeros())
       .let { this.client.order.placeOrder(it) }
       .flatMap { this.client.order.getOrder(OrderRequest(it.uuid)) }
-      .flatMap { this.repository.updateLogWithSellResult(tradeResult.buy.uuid, it, SellType.PLACED) }
       .flatMap { Mono.fromCallable { tradeResult.sellLimitOrderPlaced(it) } }
+      .flatMap {
+        this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
+          .thenReturn(it)
+          .onErrorResume { err ->
+            this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${tradeResult}, price: ${price.toStrWithStripTrailing()}", err)
+            Mono.fromCallable { it }
+          }
+      }
   }
 
   // 지정가 매도 주문이 완료되었을 때 데이터 기록
-  override fun finishSellLimit(tradeResult: TradeResult): Mono<TradeResult> {
-    return this.repository.updateLogWithSellResult(tradeResult.buy.uuid, tradeResult.sell!!, tradeResult.sellType)
+  override fun finishSellLimit(tradeResult: WorkerTradeResult): Mono<WorkerTradeResult> {
+    return this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = tradeResult.buy.uuid.toString(), value = tradeResult))
       .thenReturn(tradeResult)
+      .onErrorResume { err ->
+        this.logger.error("지정가 매도 주문 Kafka 전송시 에러가 발생했습니다! dto : $tradeResult", err)
+        Mono.fromCallable { tradeResult }
+      }
   }
 
   // 지정가 매도 주문 취소
-  override fun cancelSellLimit(tradeResult: TradeResult): Mono<TradeResult> {
+  override fun cancelSellLimit(tradeResult: WorkerTradeResult): Mono<WorkerTradeResult> {
     return if (tradeResult.sellType == SellType.PLACED) {
       this.client.order.cancelOrder(OrderRequest(tradeResult.sell!!.uuid))
-        .flatMap { this.repository.updateLogWithEmptySellResult(tradeResult.buy.uuid) }
-        .then(Mono.fromCallable { tradeResult.cancelSellOrder() })
+        .flatMap { Mono.fromCallable { tradeResult.cancelSellOrder() } }
+        .flatMap {
+          this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
+            .thenReturn(it).onErrorResume { err ->
+              this.logger.error("지정가 매도주문 취소 Kafka 전송시 에러가 발생했습니다! dto : ${tradeResult}", err)
+              Mono.fromCallable { it }
+            }
+        }
     } else {
       throw IllegalStateException("매도 주문이 지정가가 아니거나, 완료된 주문입니다.")
     }
   }
 
   // 지정가 구매 주문
-  override fun buyLimit(market: MarketCode, volume: BigDecimal, price: BigDecimal): Mono<TradeResult> {
+  override fun buyLimit(market: MarketCode, volume: BigDecimal, price: BigDecimal): Mono<WorkerTradeResult> {
     TODO("Not yet implemented")
   }
 

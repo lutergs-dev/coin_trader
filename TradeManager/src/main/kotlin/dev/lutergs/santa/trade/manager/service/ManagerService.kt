@@ -1,9 +1,9 @@
 package dev.lutergs.santa.trade.manager.service
 
 import dev.lutergs.santa.trade.manager.domain.*
-import dev.lutergs.santa.universal.mongo.DangerCoinRepository
-import dev.lutergs.santa.universal.util.subListOrAll
-import dev.lutergs.santa.universal.util.toStrWithScale
+import dev.lutergs.santa.trade.manager.domain.entity.WorkerConfig
+import dev.lutergs.santa.util.subListOrAll
+import dev.lutergs.santa.util.toStrWithScale
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteRequest
 import dev.lutergs.upbitclient.api.quotation.candle.CandleMinuteResponse
 import dev.lutergs.upbitclient.api.quotation.market.MarketWarning
@@ -21,21 +21,20 @@ import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 
 class ManagerService(
-  private val alertService: AlertService,
-  private val upbitClient: BasicClient,
+  private val dangerControlService: DangerControlService,
   private val dangerCoinRepository: DangerCoinRepository,
+  private val upbitClient: BasicClient,
   private val workerController: WorkerController,
   private val workerConfig: WorkerConfig,
 ) {
   private val logger = LoggerFactory.getLogger(ManagerService::class.java)
 
-  @KafkaListener(topics = ["\${custom.kafka.topic.trade-result}"])
-  fun consume(record: ConsumerRecord<String, String>) {
-    // consume 뜻 --> 거래 완료되었고, 이제 돈이 다시 있다.
-    this.initWorker().blockLast()
+  fun triggerManager(): Mono<List<Boolean>> {
+    return this.initWorker().collectList()
   }
 
-  private fun initWorker(): Flux<Boolean> {
+  // TODO : Manager RESTful API 로 변경 필요
+  fun initWorker(): Flux<Boolean> {
     return this.upbitClient.account.getAccount()
       .filter { it.currency == "KRW" }
       .next()
@@ -61,18 +60,18 @@ class ManagerService(
                 .map { it.market }
                 .map { market ->
                   if (totalMoney.get() >= this.workerConfig.initMaxMoney) {
-                    this.workerController.initWorker(this.workerConfig, market, this.workerConfig.initMaxMoney)
+                    this.workerController.initWorker(this.workerConfig, market, this.workerConfig.actualInitMaxMoney())
                       .also { this.logger.info("${market.quote} 를 ${this.workerConfig.initMaxMoney} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
                     totalMoney.addAndGet(-this.workerConfig.initMaxMoney)
                   } else if (totalMoney.get() < this.workerConfig.initMaxMoney && totalMoney.get() >= this.workerConfig.initMinMoney) {
-                    this.workerController.initWorker(this.workerConfig, market, totalMoney.get())
+                    this.workerController.initWorker(this.workerConfig, market, this.workerConfig.actualInitMaxMoney(totalMoney.get()))
                       .also { this.logger.info("${market.quote} 를 ${totalMoney.get()} 만큼 구매하는 Worker 를 실행시켰습니다." ) }
                     totalMoney.set(0)
                   }
                   Mono.just(true)
                 }.let { Flux.concat(it) }
             }.switchIfEmpty(
-              this.alertService.sendAllCoinsAreDangerous()
+              this.dangerControlService.sendAllCoinsAreDangerous()
                 .flatMap {
                   this.logger.warn("모든 코인이 위험한 상태입니다! 조치가 필요합니다.")
                   Mono.just(false)
@@ -118,10 +117,13 @@ class ManagerService(
         this.dangerCoinRepository.getDangerCoins()
           .collectList()
           .flatMap { dangerCoinList ->
-            this.logger.info("최근에 너무 가격이 떨어져 24시간동안 거래하지 않을 코인은 다음과 같습니다 : $dangerCoinList")
-            coinList
-              .filterNot { dangerCoinList.contains(it.first.market.quote) }
-              .let { Mono.just(it.map { p -> p.first }) }
+            dangerCoinList.map { it.coinName }
+              .let { coinStringList ->
+                this.logger.info("최근에 너무 가격이 떨어져 24시간동안 거래하지 않을 코인은 다음과 같습니다 : $coinStringList")
+                coinList
+                  .filterNot { coinStringList.contains(it.first.market.quote) }
+                  .let { Mono.just(it.map { p -> p.first }) }
+              }
           }
       }
 
@@ -148,7 +150,7 @@ class ManagerService(
      * 가중치는 n호가 (총구매가격 - 총판매가격) 의 ( (15-n) / 15 ) 를 반영함. 즉, 1호가에 가까운 가격일수록 크게 반영
      *
      * (2023.01.26) 근데 이건 너무 고정된 결과를 낳을 수도 있다. 일단 이걸 방지하고자 거래량 자체를 판단하는 것으로 수정
-     * (2023.01.28) 손실이 너무 커서, 이거 넣어서 테스트해봐야할듯.
+     * (2023.01.28) 손실이 너무 커서, 원래 버전으로 rollback
      * */
 //    return Mono.just(ticker.accTradePrice24h)
     return this.upbitClient.orderBook.getOrderBook(Markets(listOf(ticker.market)))

@@ -10,6 +10,7 @@ spring:
   data:
     mongodb:
       auto-index-creation: true
+      uuid-representation: standard
 
 custom:
   trade:

@@ -7,7 +7,6 @@ import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
 import dev.lutergs.santa.trade.worker.domain.entity.TradePhase
 import dev.lutergs.santa.trade.worker.domain.entity.Phase
-import dev.lutergs.santa.universal.mongo.DangerCoinRepository
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.beans.factory.annotation.Value
@@ -30,25 +29,32 @@ class SpringConfiguration {
   }
 
   @Bean
-  fun messageSender(
+  fun kafkaProxyMessageSender(
     @Value("\${custom.kafka.url}") kafkaUrl: String,
     @Value("\${custom.kafka.cluster.name}") kafkaClusterName: String,
     @Value("\${custom.kafka.api.key}") kafkaApiKey: String,
     @Value("\${custom.kafka.api.secret}") kafkaApiSecret: String,
-    @Value("\${custom.kafka.topic.alarm}") alarmTopicName: String,
-    @Value("\${custom.kafka.topic.trade-result}") tradeResultTopicName: String,
-    objectMapper: ObjectMapper,
-    dangerCoinRepository: DangerCoinRepository
-  ): MessageSender = MessageSenderKafkaProxyImpl(
-    kafkaProxyUrl = kafkaUrl,
-    kafkaClusterName = kafkaClusterName,
-    kafkaApiKey = kafkaApiKey,
-    kafkaApiSecret = kafkaApiSecret,
-    alarmTopicName = alarmTopicName,
-    tradeResultTopicName = tradeResultTopicName,
-    objectMapper = objectMapper,
-    dangerCoinRepository = dangerCoinRepository
+    objectMapper: ObjectMapper
+  ): KafkaProxyMessageSender = KafkaProxyMessageSender(
+    kafkaUrl, kafkaClusterName, kafkaApiKey, kafkaApiSecret, objectMapper
   )
+
+  @Bean
+  fun messageSender(
+    kafkaProxyMessageSender: KafkaProxyMessageSender,
+    @Value("\${custom.kafka.topic.alarm}") alarmTopicName: String,
+    @Value("\${custom.kafka.topic.trade-result}") tradeResultTopicName: String
+  ): MessageSender = MessageSenderKafkaProxyImpl(
+    kafkaProxyMessageSender, alarmTopicName, tradeResultTopicName
+  )
+
+  @Bean
+  fun traderImpl(
+    kafkaProxyMessageSender: KafkaProxyMessageSender,
+    client: BasicClient,
+    topicName: String,
+    @Value("\${custom.trade.watch.interval}") watchIntervalSecond: Long
+  ): TraderImpl = TraderImpl(kafkaProxyMessageSender, topicName, client, watchIntervalSecond)
 
   @Bean
   fun upbitClient(

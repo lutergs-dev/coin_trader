@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.0.31"
+version = "0.1.0"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -21,7 +21,7 @@ repositories {
 
 dependencies {
   implementation(project(":UpbitClient"))
-  implementation(project(":UniversalUtilAndDao"))
+  implementation(project(":Util"))
 
   implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.2")
   implementation("org.springframework.kafka:spring-kafka:3.0.10")

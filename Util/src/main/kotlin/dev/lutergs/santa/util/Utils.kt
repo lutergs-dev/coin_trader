@@ -1,7 +1,9 @@
-package dev.lutergs.santa.universal.util
+package dev.lutergs.santa.util
 
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
 
@@ -28,6 +30,12 @@ fun BigDecimal.toStrWithStripTrailing(): String {
 
 fun Double.toStrWithScale(point: Int = 2): String {
   return String.format("%.${point}f", this)
+}
+
+private val dateTimeFormatter = DateTimeFormatter.ofPattern("HH'시' mm'분'")
+
+fun OffsetDateTime.toHourAndMinuteString(): String {
+  return this.toLocalDateTime().format(dateTimeFormatter)
 }
 
 /**

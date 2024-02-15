@@ -1,5 +1,7 @@
-package dev.lutergs.santa.universal.mongo
+package dev.lutergs.santa.trade.manager.infra.repository.mongo
 
+import dev.lutergs.santa.trade.manager.domain.DangerCoinRepository
+import dev.lutergs.santa.trade.manager.domain.entity.DangerCoin
 import org.slf4j.LoggerFactory
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed
@@ -12,20 +14,19 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.util.retry.Retry
 import java.time.Duration
-import java.util.*
+import java.time.OffsetDateTime
 
 
 @Document("danger_coins")
 class DangerCoinEntity {
   @Id
-  var id: String? = null
+  var coinName: String? = null
 
   @Field
   @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 12)
-  var expireIn12h: Date = Date()
+  var expireIn12h: OffsetDateTime = OffsetDateTime.now()
 
-  @Field
-  var coinName: String = ""
+  fun toDangerCoin(): DangerCoin = DangerCoin(this.coinName!!, this.expireIn12h)
 }
 
 
@@ -33,25 +34,25 @@ class DangerCoinEntity {
 interface DangerCoinEntityRepository: ReactiveMongoRepository<DangerCoinEntity, String>
 
 @Component
-class DangerCoinRepository(
+class DangerCoinRepositoryImpl(
   private val repository: DangerCoinEntityRepository
-) {
+): DangerCoinRepository {
   private val logger = LoggerFactory.getLogger(this::class.java)
 
-  fun setDangerCoin(coinName: String): Mono<String> {
+  override fun setDangerCoin(coinName: String): Mono<DangerCoin> {
     return DangerCoinEntity()
       .apply { this.coinName = coinName }
       .let { this.repository.save(it)
         .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
         .doOnError { e -> this.logger.error("error occured when save danger coin [$coinName]", e) }
-        .flatMap { c -> Mono.just(c.coinName) }
+        .flatMap { Mono.fromCallable { it.toDangerCoin() } }
       }
   }
 
-  fun getDangerCoins(): Flux<String> {
+  override fun getDangerCoins(): Flux<DangerCoin> {
     return this.repository.findAll()
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when find danger coins!", it) }
-      .flatMap { Mono.just(it.coinName) }
+      .flatMap { Mono.fromCallable { it.toDangerCoin() } }
   }
 }

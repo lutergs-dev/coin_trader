@@ -47,12 +47,6 @@ custom:
 
 universal:
   db:
-    oracle:
-      descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
-      username: ${ORACLE_USERNAME:'username'}
-      password: ${ORACLE_PASSWORD:'password'}
-      max-conn: ${ORACLE_MAX_CONN:3}
-      min-conn: ${ORACLE_MIN_CONN:1}
     influx:
       host-url: ${INFLUX_HOST_URL:'http://localhost'}
       token: ${INFLUX_TOKEN:'abc'}

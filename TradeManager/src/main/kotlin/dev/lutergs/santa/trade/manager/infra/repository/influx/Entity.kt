@@ -1,7 +1,6 @@
-package dev.lutergs.santa.universal.influx
+package dev.lutergs.santa.trade.manager.infra.repository.influx
 
 import com.influxdb.v3.client.Point
-import com.influxdb.v3.client.PointValues
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.OffsetDateTime

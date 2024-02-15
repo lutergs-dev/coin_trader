@@ -3,7 +3,7 @@ package dev.lutergs.santa.trade.manager.infra.impl
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.manager.domain.AlertMessageSender
-import dev.lutergs.santa.trade.manager.domain.Message
+import dev.lutergs.santa.trade.manager.domain.entity.Message
 import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
@@ -19,6 +19,7 @@ class AlertMessageSenderImpl(
   baseUrl: String,
   username: String,
   password: String,
+  private val topicName: String,
   private val objectMapper: ObjectMapper
 ): AlertMessageSender {
   private val webClient = WebClient.builder()
@@ -34,7 +35,7 @@ class AlertMessageSenderImpl(
   override fun sendMessage(msg: Message): Mono<String> {
     return this.webClient
       .post()
-      .bodyValue(this.objectMapper.writeValueAsString(Body.fromMessage(msg)))
+      .bodyValue(this.objectMapper.writeValueAsString(Body.fromMessage(msg, this.topicName)))
       .retrieve()
       .bodyToMono(String::class.java)
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
@@ -54,8 +55,8 @@ private data class Body (
   @JsonProperty("message")  val message: String
 ) {
   companion object {
-    fun fromMessage(msg: Message): Body {
-      return Body(msg.topic, msg.title, msg.body)
+    fun fromMessage(msg: Message, topicName: String): Body {
+      return Body(topicName, msg.title, msg.body)
     }
   }
 }

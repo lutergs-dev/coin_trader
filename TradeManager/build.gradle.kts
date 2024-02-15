@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.0.35"
+version = "0.1.0"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -21,10 +21,17 @@ repositories {
 
 dependencies {
   implementation(project(":UpbitClient"))
-  implementation(project(":UniversalUtilAndDao"))
+  implementation(project(":Util"))
 
   implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.2")
+  implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.0.4")
   implementation("org.springframework.kafka:spring-kafka:3.0.10")
+
+  // coin time-base data store
+  implementation("com.influxdb:influxdb3-java:0.5.1")
+
+  // kubernetes setting
+  implementation("io.kubernetes:client-java:19.0.0")
 
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
 
@@ -32,7 +39,6 @@ dependencies {
   implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
 
-  implementation("io.kubernetes:client-java:19.0.0")
 
   testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.2")
   testImplementation("io.projectreactor:reactor-test:3.5.4")

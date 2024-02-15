@@ -1,4 +1,4 @@
-package dev.lutergs.santa.universal.influx
+package dev.lutergs.santa.trade.manager.infra.repository.influx
 
 import com.influxdb.v3.client.InfluxDBClient
 import org.springframework.stereotype.Repository
