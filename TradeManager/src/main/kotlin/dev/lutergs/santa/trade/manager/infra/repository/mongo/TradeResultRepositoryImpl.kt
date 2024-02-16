@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
+import org.springframework.data.mongodb.repository.Query
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Repository
@@ -16,6 +17,7 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 import reactor.util.retry.Retry
 import java.time.Duration
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -33,10 +35,10 @@ class TradeResultEntity {
   @Field
   var sellType: SellType = SellType.NULL
 
-  fun toTradeResult3(): ManagerTradeResult = ManagerTradeResult(buy, sell!!, sellType)
+  fun toManagerTradeResult(): ManagerTradeResult = ManagerTradeResult(buy, sell, sellType)
 
   companion object {
-    fun fromTradeResult3(managerTradeResult: ManagerTradeResult): TradeResultEntity = TradeResultEntity()
+    fun fromManagerTradeResult(managerTradeResult: ManagerTradeResult): TradeResultEntity = TradeResultEntity()
       .apply {
         this.id = managerTradeResult.buy.uuid
         this.buy = managerTradeResult.buy
@@ -48,7 +50,8 @@ class TradeResultEntity {
 
 @Repository
 interface TradeResultReactiveMongoRepository: ReactiveMongoRepository<TradeResultEntity, UUID> {
-  fun findAllByBuyCreatedAtAfter(buyCreatedAt: OffsetDateTime): Flux<TradeResultEntity>
+  @Query("{'buy.placeAt': {\$gt: ?0}}")
+  fun findAllByBuyCreatedAtAfter(buyCreatedAt: LocalDateTime): Flux<TradeResultEntity>
 }
 
 @Component
@@ -66,23 +69,23 @@ class TradeResultRepositoryImpl(
         it.sell = t.sell
         it.sellType = t.sellType
         Mono.fromCallable { it }
-      }.switchIfEmpty { Mono.fromCallable { TradeResultEntity.fromTradeResult3(t) } }
+      }.switchIfEmpty { Mono.fromCallable { TradeResultEntity.fromManagerTradeResult(t) } }
       .flatMap { this.repository.save(it) }
-      .flatMap { Mono.fromCallable { it.toTradeResult3() } }
+      .flatMap { Mono.fromCallable { it.toManagerTradeResult() } }
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when save entity! entity = $t", it) }
   }
 
   override fun findByBuyUUID(uuid: UUID): Mono<ManagerTradeResult> {
     return this.repository.findById(uuid)
-      .flatMap { Mono.fromCallable { it.toTradeResult3() } }
+      .flatMap { Mono.fromCallable { it.toManagerTradeResult() } }
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when find entity! id = $uuid", it) }
   }
 
   override fun getAllResultAfterDateTime(datetime: OffsetDateTime): Flux<ManagerTradeResult> {
-    return this.repository.findAllByBuyCreatedAtAfter(datetime)
-      .flatMap { Mono.fromCallable { it.toTradeResult3() } }
+    return this.repository.findAllByBuyCreatedAtAfter(datetime.toLocalDateTime())
+      .flatMap { Mono.fromCallable { it.toManagerTradeResult() } }
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when find by finishAt after! finishAt = $datetime", it) }
   }

@@ -1,19 +1,41 @@
 package dev.lutergs.upbitclient.webclient
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import dev.lutergs.upbitclient.api.Param
+import dev.lutergs.upbitclient.dto.*
+import org.springframework.http.codec.json.Jackson2JsonDecoder
+import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.UUID
 import kotlin.reflect.KClass
 
 class Requester(
   baseUrl: String,
   private val tokenGenerator: TokenGenerator
 ) {
+  private val objectMapper = ObjectMapper()
+    .registerModules(
+      JavaTimeModule(),
+      SimpleModule()
+        .addSerializer(OrderType::class.java, OrderTypeSerializer())
+        .addDeserializer(OrderType::class.java, OrderTypeDeserializer())
+        .addSerializer(OrderSide::class.java, OrderSideSerializer())
+        .addDeserializer(OrderSide::class.java, OrderSideDeserializer())
+        .addSerializer(MarketCode::class.java, MarketCodeSerializer())
+        .addDeserializer(MarketCode::class.java, MarketCodeDeserializer())
+    ).registerKotlinModule()
 
   // TODO : 차후 Spring Webclient 의존성 제거 및 netty HttpClient 버전으로 재작성
-  private val webClient = WebClient.builder()
+  private val webClient = ExchangeStrategies.builder()
+    .codecs { it.defaultCodecs().jackson2JsonDecoder(Jackson2JsonDecoder(this.objectMapper)) }
+    .build()
+    .let { WebClient.builder().exchangeStrategies(it) }
     .baseUrl(baseUrl)
     .defaultHeader("Content-Type", "application/json")
     .build()

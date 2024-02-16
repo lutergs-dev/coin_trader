@@ -1,0 +1,104 @@
+package dev.lutergs.santa.trade.worker.infra.config
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import dev.lutergs.santa.trade.worker.domain.MessageSender
+import dev.lutergs.santa.trade.worker.domain.entity.MainTrade
+import dev.lutergs.santa.trade.worker.domain.entity.TradePhase
+import dev.lutergs.santa.trade.worker.domain.entity.Phase
+import dev.lutergs.santa.trade.worker.infra.KafkaProxyMessageSender
+import dev.lutergs.santa.trade.worker.infra.ManagerImpl
+import dev.lutergs.santa.trade.worker.infra.MessageSenderKafkaProxyImpl
+import dev.lutergs.santa.trade.worker.infra.TraderImpl
+import dev.lutergs.upbitclient.dto.MarketCode
+import dev.lutergs.upbitclient.webclient.BasicClient
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import java.math.BigDecimal
+
+@Configuration
+@EnableConfigurationProperties(value = [
+  TradeConfig::class,
+  KafkaConfig::class,
+  UpbitConfig::class,
+  ManagerConfig::class
+])
+class SpringConfig(
+  private val tradeConfig: TradeConfig,
+  private val kafkaConfig: KafkaConfig,
+  private val upbitConfig: UpbitConfig,
+  private val managerConfig: ManagerConfig
+) {
+
+  @Bean
+  fun mainTrade(): MainTrade = MainTrade(
+    market = this.tradeConfig.startMarket.split("-").let { MarketCode(it[0], it[1]) },
+    money = this.tradeConfig.startMoney
+  )
+
+
+  @Bean
+  fun kafkaProxyMessageSender(
+    objectMapper: ObjectMapper
+  ): KafkaProxyMessageSender = KafkaProxyMessageSender(
+    kafkaProxyUrl = this.kafkaConfig.url,
+    kafkaClusterName = this.kafkaConfig.cluster.name,
+    kafkaApiKey = this.kafkaConfig.api.key,
+    kafkaApiSecret = this.kafkaConfig.api.secret,
+    objectMapper
+  )
+
+  @Bean
+  fun messageSender(
+    kafkaProxyMessageSender: KafkaProxyMessageSender
+  ): MessageSender = MessageSenderKafkaProxyImpl(
+    kafkaProxyMessageSender,
+    alarmTopicName = this.kafkaConfig.topic.alarm,
+    tradeResultTopicName = this.kafkaConfig.topic.tradeResult
+  )
+
+  @Bean
+  fun traderImpl(
+    kafkaProxyMessageSender: KafkaProxyMessageSender,
+    client: BasicClient
+  ): TraderImpl = TraderImpl(
+    kafkaProxyMessageSender,
+    topicName = this.kafkaConfig.topic.tradeResult,
+    client,
+    watchIntervalSecond = this.tradeConfig.watch.interval
+  )
+
+  @Bean
+  fun managerImpl(): ManagerImpl = ManagerImpl(
+    managerUrl = this.managerConfig.url
+  )
+
+  @Bean
+  fun upbitClient() = BasicClient(
+    accessKey = this.upbitConfig.accessKey,
+    secretKey = this.upbitConfig.secretKey
+  )
+
+  @Bean
+  fun objectMapper(): ObjectMapper = ObjectMapper()
+    .registerKotlinModule()
+    .registerModule(JavaTimeModule())
+  
+  @Bean
+  fun phaseInfo(): TradePhase = TradePhase(
+    phase1 = Phase(
+      waitMinute = this.tradeConfig.sell.phase1.waitMinute,
+      profitPercent = BigDecimal(this.tradeConfig.sell.phase1.profitPercent),
+      lossPercent = BigDecimal(this.tradeConfig.sell.phase1.lossPercent)
+    ),
+    phase2 = Phase(
+      waitMinute = this.tradeConfig.sell.phase2.waitMinute,
+      profitPercent = BigDecimal(this.tradeConfig.sell.phase2.profitPercent),
+      lossPercent = BigDecimal(this.tradeConfig.sell.phase2.lossPercent)
+    )
+  )
+}
+

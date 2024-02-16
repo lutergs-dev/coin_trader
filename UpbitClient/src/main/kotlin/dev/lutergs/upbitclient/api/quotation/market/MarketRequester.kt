@@ -31,7 +31,6 @@ data class MarketCodeRequest(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MarketCodeResponse(
-  @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
   @JsonProperty("korean_name") val koreanName: String,
   @JsonProperty("english_name") val englishName: String,

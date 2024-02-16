@@ -3,8 +3,10 @@ package dev.lutergs.upbitclient.api.exchange.account
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import dev.lutergs.upbitclient.api.RequestDao
 import dev.lutergs.upbitclient.dto.NumberStringDeserializer
+import dev.lutergs.upbitclient.dto.NumberStringSerializer
 import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
 import java.math.BigDecimal
@@ -27,10 +29,13 @@ class AccountRequester(requester: Requester) : RequestDao(requester) {
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class AccountResponse(
   @JsonProperty("currency") val currency: String,       // TODO : 추후 ENUM 으로 변경
+  @JsonSerialize(using = NumberStringSerializer::class)
   @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("balance") val balance: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
   @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("locked") val locked: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
   @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("avg_buy_price") val avgBuyPrice: BigDecimal,
   @JsonProperty("avg_buy_price_modified") val avgBuyPriceModified: Boolean,

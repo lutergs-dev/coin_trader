@@ -1,8 +1,3 @@
-spring:
-  data:
-    mongodb:
-      uri: mongodb+srv://${MONGO_USERNAME:'username'}:${MONGO_PASSWORD:'password'}@${MONGO_URL:'url'}/${MONGO_DATABASE:'db'}?retryWrites=true&w=majority
-
 custom:
   id: ${APP_ID:app-id}
   kafka:
@@ -27,22 +22,11 @@ custom:
         wait-minute: ${PHASE_2_WAIT_MINUTE:90}
         profit-percent: ${PHASE_2_PROFIT_PERCENT:0.1}
         loss-percent: ${PHASE_2_LOSS_PERCENT:2.0}
+  manager:
+    url: ${MANAGER_URL:'http://localhost'}
   upbit:
     access-key: ${UPBIT_ACCESS_KEY:upbit-access-key}
     secret-key: ${UPBIT_SECRET_KEY:upbit-secret-key}
-
-universal:
-  db:
-    oracle:
-      descriptor: ${ORACLE_DESCRIPTOR:'connection-string'}
-      username: ${ORACLE_USERNAME:'username'}
-      password: ${ORACLE_PASSWORD:'password'}
-      max-conn: ${ORACLE_MAX_CONN:3}
-      min-conn: ${ORACLE_MIN_CONN:1}
-    influx:
-      host-url: ${INFLUX_HOST_URL:'http://localhost'}
-      token: ${INFLUX_TOKEN:'abc'}
-      database: ${INFLUX_DATABASE:'database'}
 
 
 

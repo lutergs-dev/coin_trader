@@ -1,4 +1,4 @@
 custom:
   trade:
     watch:
-      interval: 3         # 현재가 확인 주기. 3초에 한 번씩 거래한 코인의 현재가 확인
+      interval: 1         # 현재가 확인 주기. 1초에 한 번씩 거래한 코인의 현재가 확인

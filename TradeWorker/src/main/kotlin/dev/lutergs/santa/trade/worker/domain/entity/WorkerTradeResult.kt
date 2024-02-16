@@ -11,17 +11,6 @@ class WorkerTradeResult(
   sellType: SellType = SellType.NULL
 ) : TradeResult(buy, sell, sellType) {
 
-  fun toMsg(): TradeResultMessage = run {
-    if (this.sell != null) {
-      TradeResultMessage(
-        TradeResultMsgKey(this.buy.uuid, this.profit!!),
-        TradeResultMsgValue(this.buy, this.sell!!)
-      )
-    } else {
-      throw IllegalStateException("매도 주문이 없습니다. 메시지를 생성할 수 없습니다. 전체 값 : $this")
-    }
-  }
-
   fun completeSellOrder(sell: OrderResponse, sellType: SellType): WorkerTradeResult {
     if (!sell.isFinished()) throw IllegalStateException("종료되지 않은 매도 주문으로 TradeResult 의 매도주문 기록을 요청했습니다.")
     return WorkerTradeResult(this.buy, sell, sellType)

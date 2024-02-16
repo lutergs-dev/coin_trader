@@ -2,6 +2,7 @@ package dev.lutergs.upbitclient.api.quotation.ticker
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import dev.lutergs.upbitclient.api.RequestDao
 import dev.lutergs.upbitclient.webclient.Requester
 import dev.lutergs.upbitclient.dto.*
@@ -18,15 +19,18 @@ class TickerRequester(requester: Requester) : RequestDao(requester) {
 }
 
 data class TickerResponse(
-  @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
-  @JsonDeserialize(using = DateDeserializer::class)
+  @JsonSerialize(using = TickerDateSerializer::class)
+  @JsonDeserialize(using = TickerDateDeserializer::class)
   @JsonProperty("trade_date") val tradeDate: LocalDate,
-  @JsonDeserialize(using = TimeDeserializer::class)
+  @JsonSerialize(using = TickerTimeSerializer::class)
+  @JsonDeserialize(using = TickerTimeDeserializer::class)
   @JsonProperty("trade_time") val tradeTime: LocalTime,
-  @JsonDeserialize(using = DateDeserializer::class)
+  @JsonSerialize(using = TickerDateSerializer::class)
+  @JsonDeserialize(using = TickerDateDeserializer::class)
   @JsonProperty("trade_date_kst") val tradeDateKst: LocalDate,
-  @JsonDeserialize(using = TimeDeserializer::class)
+  @JsonSerialize(using = TickerTimeSerializer::class)
+  @JsonDeserialize(using = TickerTimeDeserializer::class)
   @JsonProperty("trade_time_kst") val tradeTimeKst: LocalTime,
   @JsonProperty("trade_timestamp") val tradeTimestamp: Long,
   @JsonProperty("opening_price") val openingPrice: BigDecimal,
@@ -45,10 +49,12 @@ data class TickerResponse(
   @JsonProperty("acc_trade_volume") val accTradeVolume: BigDecimal,
   @JsonProperty("acc_trade_volume_24h") val accTradeVolume24h: BigDecimal,
   @JsonProperty("highest_52_week_price") val highest52weekPrice: BigDecimal,
-  @JsonDeserialize(using = DateWithHyphenDeserializer::class)
+  @JsonSerialize(using = TickerDateWithHyphenSerializer::class)
+  @JsonDeserialize(using = TickerDateWithHyphenDeserializer::class)
   @JsonProperty("highest_52_week_date") val highest52weekDate: LocalDate,
   @JsonProperty("lowest_52_week_price") val lowest52weekPrice: BigDecimal,
-  @JsonDeserialize(using = DateWithHyphenDeserializer::class)
+  @JsonSerialize(using = TickerDateWithHyphenSerializer::class)
+  @JsonDeserialize(using = TickerDateWithHyphenDeserializer::class)
   @JsonProperty("lowest_52_week_date") val lowest52weekDate: LocalDate,
   @JsonProperty("timestamp") val timestamp: Long
 )

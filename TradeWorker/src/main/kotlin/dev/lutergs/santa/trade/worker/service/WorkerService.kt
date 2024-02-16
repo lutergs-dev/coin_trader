@@ -29,6 +29,7 @@ class WorkerService(
   private val mainTrade: MainTrade,
   private val tradePhase: TradePhase,
   private val alarmSender: MessageSender,
+  private val manager: Manager,
   private val trader: Trader,
   private val client: BasicClient,
   private val applicationContext: ApplicationContext,
@@ -46,7 +47,7 @@ class WorkerService(
       .flatMap {
         if (it.sell == null) { this.phase2(it) }
         else { Mono.just(it) }
-      }.flatMap { this.alarmSender.sendTradeResult(it.toMsg()) }
+      }.flatMap { this.manager.executeNewWorker() }
       .doOnTerminate { this.closeApplication() }
       .subscribe()
   }

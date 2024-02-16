@@ -32,7 +32,6 @@ class OrderBookRequester(requester: Requester) : RequestDao(requester) {
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderBookResponse(
-  @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
   @JsonProperty("timestamp") val timestamp: Long,
   @JsonProperty("total_ask_size") val totalAskSize: BigDecimal,

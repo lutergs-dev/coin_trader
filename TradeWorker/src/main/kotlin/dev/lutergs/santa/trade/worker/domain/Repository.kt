@@ -34,3 +34,7 @@ interface Trader {
   // 지정가 매수 주문
   fun buyLimit(market: MarketCode, volume: BigDecimal, price: BigDecimal): Mono<WorkerTradeResult>
 }
+
+interface Manager {
+  fun executeNewWorker(): Mono<Boolean>
+}

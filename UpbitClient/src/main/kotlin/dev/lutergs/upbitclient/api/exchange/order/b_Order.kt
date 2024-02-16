@@ -34,26 +34,35 @@ import java.util.UUID
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderResponse(
-  @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
-  @JsonDeserialize(using = OrderSideDeserializer::class)
   @JsonProperty("side") val side: OrderSide,
-  @JsonDeserialize(using = OrderTypeDeserializer::class)
   @JsonProperty("ord_type") val orderType: OrderType,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("price") val price: BigDecimal? = null,
   @JsonProperty("state") val state: String,
-  @JsonSerialize(using = MarketCodeSerializer::class)
-  @JsonDeserialize(using = MarketCodeDeserializer::class)
   @JsonProperty("market") val market: MarketCode,
-  @JsonSerialize(using = OffsetDateTimeSerializer::class)
-  @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("volume") val volume: BigDecimal? = null,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("remaining_volume") val remainingVolume: BigDecimal? = null,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("reserved_fee") val reservedFee: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("remaining_fee") val remainingFee: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("paid_fee") val paidFee: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("locked") val locked: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("executed_volume") val executedVolume: BigDecimal,
   @JsonProperty("trades_count") val tradesCount: Int,
   @JsonProperty("trades") val trades: List<OrderTrade>
@@ -118,12 +127,16 @@ data class OrderResponse(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderTrade(
   @JsonProperty("market") val market: String,
-  @JsonDeserialize(using = UuidDeserializer::class)
   @JsonProperty("uuid") val uuid: UUID,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("price") val price: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("volume") val volume: BigDecimal,
+  @JsonSerialize(using = NumberStringSerializer::class)
+  @JsonDeserialize(using = NumberStringDeserializer::class)
   @JsonProperty("funds") val funds: BigDecimal,
   @JsonProperty("side") val side: String,
-  @JsonDeserialize(using = OffsetDateTimeDeserializer::class)
   @JsonProperty("created_at") val createdAt: OffsetDateTime
 )

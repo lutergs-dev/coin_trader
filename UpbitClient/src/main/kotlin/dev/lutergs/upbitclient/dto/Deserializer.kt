@@ -10,9 +10,9 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
-import java.util.UUID
+import java.time.format.DateTimeFormatter
 
-class DateDeserializer: JsonDeserializer<LocalDate>() {
+class TickerDateDeserializer: JsonDeserializer<LocalDate>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): LocalDate {
     val dateString = p.text
     return LocalDate.of(
@@ -23,7 +23,17 @@ class DateDeserializer: JsonDeserializer<LocalDate>() {
   }
 }
 
-class TimeDeserializer: JsonDeserializer<LocalTime>() {
+class TickerDateSerializer: JsonSerializer<LocalDate>() {
+  override fun serialize(value: LocalDate, gen: JsonGenerator, serializers: SerializerProvider) {
+    gen.writeString(value.format(dateTimeFormatter))
+  }
+
+  companion object {
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+  }
+}
+
+class TickerTimeDeserializer: JsonDeserializer<LocalTime>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): LocalTime {
     val dateString = p.text
     return LocalTime.of(
@@ -34,7 +44,17 @@ class TimeDeserializer: JsonDeserializer<LocalTime>() {
   }
 }
 
-class DateWithHyphenDeserializer: JsonDeserializer<LocalDate>() {
+class TickerTimeSerializer: JsonSerializer<LocalTime>() {
+  override fun serialize(value: LocalTime, gen: JsonGenerator, serializers: SerializerProvider) {
+    gen.writeString(value.format(dateTimeFormatter))
+  }
+
+  companion object {
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("HHmmss")
+  }
+}
+
+class TickerDateWithHyphenDeserializer: JsonDeserializer<LocalDate>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): LocalDate {
     val dateStrings = p.text.split("-")
     return LocalDate.of(
@@ -45,9 +65,25 @@ class DateWithHyphenDeserializer: JsonDeserializer<LocalDate>() {
   }
 }
 
+class TickerDateWithHyphenSerializer: JsonSerializer<LocalDate>() {
+  override fun serialize(value: LocalDate, gen: JsonGenerator, serializers: SerializerProvider) {
+    gen.writeString(value.format(dateTimeFormatter))
+  }
+
+  companion object {
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  }
+}
+
 class NumberStringDeserializer: JsonDeserializer<BigDecimal>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): BigDecimal {
     return BigDecimal(p.text)
+  }
+}
+
+class NumberStringSerializer: JsonSerializer<BigDecimal>() {
+  override fun serialize(value: BigDecimal, gen: JsonGenerator, serializers: SerializerProvider?) {
+    gen.writeString(value.stripTrailingZeros().toPlainString())
   }
 }
 
@@ -73,18 +109,6 @@ class OffsetDateTimeDeserializer: JsonDeserializer<OffsetDateTime>() {
   }
 }
 
-class OffsetDateTimeSerializer: JsonSerializer<OffsetDateTime>() {
-  override fun serialize(value: OffsetDateTime, gen: JsonGenerator, serializers: SerializerProvider) {
-    gen.writeString(value.toString())
-  }
-
-}
-
-class UuidDeserializer: JsonDeserializer<UUID>() {
-  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): UUID {
-    return p.text.let { UUID.fromString(it) }
-  }
-}
 
 class OrderTypeDeserializer: JsonDeserializer<OrderType>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OrderType {
@@ -92,8 +116,21 @@ class OrderTypeDeserializer: JsonDeserializer<OrderType>() {
   }
 }
 
+class OrderTypeSerializer: JsonSerializer<OrderType>() {
+  override fun serialize(value: OrderType, gen: JsonGenerator, serializers: SerializerProvider) {
+    gen.writeString(value.name.lowercase())
+  }
+}
+
+
 class OrderSideDeserializer: JsonDeserializer<OrderSide>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OrderSide {
     return OrderSide.fromRawString(p.text)
+  }
+}
+
+class OrderSideSerializer: JsonSerializer<OrderSide>() {
+  override fun serialize(value: OrderSide, gen: JsonGenerator, serializers: SerializerProvider) {
+    gen.writeString(value.name.lowercase())
   }
 }
