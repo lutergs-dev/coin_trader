@@ -10,7 +10,7 @@ data class WorkerConfig(
   val initMinMoney: Long
 ) {
   companion object {
-    private val actualPercentage: BigDecimal = BigDecimal("99.5")   // 구매시 수수료를 고려한 조치
+    private val actualPercentage: BigDecimal = BigDecimal("0.995")   // 구매시 수수료를 고려한 조치
   }
   fun actualInitMaxMoney(money: Long? = null): Long {
     return (BigDecimal(money ?: this.initMaxMoney) * actualPercentage)

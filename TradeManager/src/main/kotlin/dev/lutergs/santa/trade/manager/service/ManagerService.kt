@@ -10,9 +10,7 @@ import dev.lutergs.upbitclient.api.quotation.market.MarketWarning
 import dev.lutergs.upbitclient.api.quotation.ticker.TickerResponse
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.slf4j.LoggerFactory
-import org.springframework.kafka.annotation.KafkaListener
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
@@ -33,8 +31,7 @@ class ManagerService(
     return this.initWorker().collectList()
   }
 
-  // TODO : Manager RESTful API 로 변경 필요
-  fun initWorker(): Flux<Boolean> {
+  private fun initWorker(): Flux<Boolean> {
     return this.upbitClient.account.getAccount()
       .filter { it.currency == "KRW" }
       .next()
