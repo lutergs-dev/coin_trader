@@ -3,7 +3,7 @@ spring:
     listener:
       type: single
       ack-mode: record
-      concurrency: 1
+      concurrency: 2
     properties:
       sasl.mechanism: PLAIN
       security.protocol: SASL_SSL
