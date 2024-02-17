@@ -28,6 +28,6 @@ class MongoConfig {
 
   @ReadingConverter
   class OffsetDateTimeReadConverter: Converter<Date, OffsetDateTime> {
-    override fun convert(source: Date): OffsetDateTime = source.toInstant().atOffset(ZoneOffset.UTC)
+    override fun convert(source: Date): OffsetDateTime = source.toInstant().atOffset(ZoneOffset.ofHours(9))
   }
 }

@@ -17,7 +17,6 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 import reactor.util.retry.Retry
 import java.time.Duration
-import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -50,8 +49,7 @@ class TradeResultEntity {
 
 @Repository
 interface TradeResultReactiveMongoRepository: ReactiveMongoRepository<TradeResultEntity, UUID> {
-  @Query("{'buy.placeAt': {\$gt: ?0}}")
-  fun findAllByBuyCreatedAtAfter(buyCreatedAt: LocalDateTime): Flux<TradeResultEntity>
+  fun findAllByBuyCreatedAtAfter(buyCreatedAt: OffsetDateTime): Flux<TradeResultEntity>
 }
 
 @Component
@@ -84,7 +82,7 @@ class TradeResultRepositoryImpl(
   }
 
   override fun getAllResultAfterDateTime(datetime: OffsetDateTime): Flux<ManagerTradeResult> {
-    return this.repository.findAllByBuyCreatedAtAfter(datetime.toLocalDateTime())
+    return this.repository.findAllByBuyCreatedAtAfter(datetime)
       .flatMap { Mono.fromCallable { it.toManagerTradeResult() } }
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       .doOnError { this.logger.error("error occured when find by finishAt after! finishAt = $datetime", it) }

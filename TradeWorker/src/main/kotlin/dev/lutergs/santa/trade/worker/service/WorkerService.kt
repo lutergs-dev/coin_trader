@@ -23,6 +23,7 @@ import java.math.BigDecimal
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 @Service
 class WorkerService(
@@ -150,7 +151,8 @@ class WorkerService(
         logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithScale(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
         this.client.ticker.getTicker(Markets.fromMarket(workerTradeResult.buy.market)).next()
           .flatMap { ticker ->
-            val type = if (ticker.tradePrice > workerTradeResult.buy.avgPrice()) SellType.TIMEOUT_PROFIT else SellType.TIMEOUT_LOSS
+            val profit = workerTradeResult.buy.totalPrice() - (ticker.tradePrice * workerTradeResult.buy.avgPrice()) - (workerTradeResult.buy.paidFee * BigDecimal(2.0))
+            val type = if (profit > BigDecimal.ZERO) SellType.TIMEOUT_PROFIT else SellType.TIMEOUT_LOSS
             this.trader.sellMarket(workerTradeResult, type)
               .doOnNext { logger.info("시간초과 ${if (ticker.tradePrice > it.buy.avgPrice()) "이익" else "손실"} 매도가 완료되었습니다.") }
           }
@@ -161,7 +163,7 @@ class WorkerService(
     LocalDateTime.now()
       .takeIf { it.second < this.watchIntervalSecond }
       ?.let {
-        Duration.between(dt.toLocalDateTime(), it)
+        Duration.between(dt.atZoneSameInstant(ZoneId.of("Asia/Seoul")).toLocalDateTime(), it)
           .let { d ->
             val hours = d.toHours()
             val minutes = d.toMinutes() % 60

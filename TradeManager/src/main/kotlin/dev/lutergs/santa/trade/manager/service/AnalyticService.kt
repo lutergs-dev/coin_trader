@@ -31,13 +31,13 @@ class AnalyticService(
         body = this.body + data.toInfoString() + "\n"
       )
 
-      fun toMessage(): Message {
+      fun toMessage(hour: Int): Message {
         val total =
           "1차 이득 ${this.sellTypeCount[SellType.PROFIT] ?: 0}번, 손실 ${this.sellTypeCount[SellType.LOSS] ?: 0}번, " +
           "2차 이득 ${this.sellTypeCount[SellType.STOP_PROFIT] ?: 0}번, 손실 ${this.sellTypeCount[SellType.STOP_LOSS] ?: 0}번, " +
           "시간초과 이득 ${this.sellTypeCount[SellType.TIMEOUT_PROFIT] ?: 0}번, 손실 ${this.sellTypeCount[SellType.TIMEOUT_LOSS] ?: 0}번이 있었습니다."
         return Message(
-          title = "최근 24시간 동안 ${this.profit.toStrWithScale()} 원을 벌었습니다.",
+          title = "최근 ${hour}시간 동안 ${this.profit.toStrWithScale()} 원을 벌었습니다.",
           body = "코인 매수/매도 기록은 다음과 같습니다.\n\n${this.body}\n$total"
         )
       }
@@ -53,7 +53,7 @@ class AnalyticService(
         orderEntities
           .sortedBy { it.buy.createdAt }
           .fold(OrderFoldDto(BigDecimal.ZERO, mutableMapOf(), "")) { acc, data -> acc.update(data) }
-          .toMessage()
+          .toMessage(lastHour)
       } }.flatMap { this.messageSender.sendMessage(it) }
   }
 }
