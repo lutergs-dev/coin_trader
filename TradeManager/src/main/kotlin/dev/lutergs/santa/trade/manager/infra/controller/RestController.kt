@@ -21,7 +21,7 @@ class RestController {
     triggerController: TriggerController
   ) = router {
     accept(MediaType.APPLICATION_JSON).nest {
-      POST("/trigger-hour-analystic", triggerController::triggerTodayEarning)
+      POST("/trigger-hour-analytic", triggerController::triggerTodayEarning)
       POST("/trigger-manager", triggerController::triggerWorkerInit)
     }
   }
