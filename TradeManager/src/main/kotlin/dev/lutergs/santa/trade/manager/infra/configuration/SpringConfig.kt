@@ -82,10 +82,12 @@ class SpringConfig(
   
   @Bean
   fun dangerControlService(
+    tradeResultRepository: TradeResultRepository,
     dangerCoinRepository: DangerCoinRepository,
     messageSender: AlertMessageSender,
     objectMapper: ObjectMapper,
   ): DangerControlService = DangerControlService(
+    tradeResultRepository,
     dangerCoinRepository,
     messageSender, 
     objectMapper

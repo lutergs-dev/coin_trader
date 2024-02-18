@@ -3,11 +3,14 @@ package dev.lutergs.santa.trade.manager.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.manager.domain.*
 import dev.lutergs.santa.trade.manager.domain.entity.Message
+import dev.lutergs.santa.util.toStrWithStripTrailing
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.springframework.kafka.annotation.KafkaListener
 import reactor.core.publisher.Mono
+import java.time.OffsetDateTime
 
 class DangerControlService(
+  private val tradeResultRepository: TradeResultRepository,
   private val dangerCoinRepository: DangerCoinRepository,
   private val messageSender: AlertMessageSender,
   private val objectMapper: ObjectMapper
@@ -22,11 +25,18 @@ class DangerControlService(
       .flatMap { this.dangerCoinRepository.getDangerCoins().collectList() }
       .filter { it.size > 3 }
       .flatMap { dangerCoins ->
-        Message(
-          title = "[긴급] 최근 24시간동안 ${dangerCoins.size}번 하락 발생",
-          body = dangerCoins.joinToString(separator = "\n") { it.toInfoString() }
-        ).let { this.messageSender.sendMessage(it) }
-      }.block()
+        this.tradeResultRepository.getAllResultAfterDateTime(OffsetDateTime.now().minusHours(24))
+          .filter { it.sellType.isFinished() }
+          .collectList()
+          .flatMap { t -> t.sumOf { it.profit!! }.let { Mono.just(it) } }
+          .flatMap { profitSum ->
+            Message(
+              title = "[긴급] 최근 24시간동안 ${dangerCoins.size}번 하락 발생",
+              body = "${dangerCoins.sortedBy { it.createdAt }.joinToString(separator = "\n") { it.toInfoString() }}\n\n24시간 총수입 : ${profitSum.toStrWithStripTrailing()}"
+            ).let { m -> Mono.just(m) }
+          }
+      }.flatMap { this.messageSender.sendMessage(it) }
+      .block()
   }
 
 
