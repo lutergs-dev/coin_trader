@@ -57,7 +57,8 @@ class WorkerService(
       .flatMap {
         if (it.sell == null) { this.phase2(it) }
         else { Mono.just(it) }
-      }.flatMap { this.manager.executeNewWorker() }
+      }.flatMap { this.priceTracker.cleanUp(it.buy.uuid) }
+      .then(Mono.defer { this.manager.executeNewWorker() })
       .doOnTerminate { this.closeApplication() }
       .block()
   }

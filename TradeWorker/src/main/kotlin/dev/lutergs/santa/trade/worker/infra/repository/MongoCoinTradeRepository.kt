@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Field
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import org.springframework.stereotype.Repository
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -50,5 +51,6 @@ class MongoCoinPriceEntity {
 
 @Repository
 interface MongoCoinPriceReactiveRepository: ReactiveMongoRepository<MongoCoinPriceEntity, UUID> {
+  fun findAllByTradeId(tradeId: UUID): Flux<MongoCoinPriceEntity>
   fun findAllByTradeIdOrderByExpireIn5h(tradeId: UUID, pageable: Pageable): Flux<MongoCoinPriceEntity>
 }

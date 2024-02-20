@@ -50,4 +50,9 @@ class CoinPriceTrackerImpl(
       ) } }
   }
 
+  override fun cleanUp(buyUUID: UUID): Mono<Void> {
+    return this.repository.findAllByTradeId(buyUUID)
+      .flatMap { this.repository.delete(it) }
+      .last()
+  }
 }

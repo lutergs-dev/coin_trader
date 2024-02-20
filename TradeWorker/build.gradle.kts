@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.1.4"
+version = "0.1.5"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
