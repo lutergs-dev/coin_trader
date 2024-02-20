@@ -13,12 +13,12 @@ import org.slf4j.Logger
 import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
 import reactor.core.publisher.Mono
-import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.atomic.AtomicBoolean
 
 class WorkerService(
   // 실행 시 필요한 변수 집합
@@ -89,29 +89,35 @@ class WorkerService(
       OrderStep.calculateOrderStepPrice(this.tradePhase.phase1.getLossPrice(it)),
       OrderStep.calculateOrderStepPrice(it)
     )}
+    val (isEnd, endTime) = AtomicBoolean(false) to LocalDateTime.now().plusMinutes(this.tradePhase.phase1.waitMinute)
     return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
       .flatMap { status ->
         this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, status.currentPrice, buyPrice, logger)
         when {
           // 이득점 도달시, 이동평균추세가 꺾이면 판매
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
+            .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext {
               logger.info("코인이 이득점인 ${profitPrice.toPlainString()}원보다 높고, 상승추세가 꺾였습니다. (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.")
             }
           // 손실점 도달시 판매
           status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.STOP_LOSS)
+            .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext {
               logger.info("코인이 손실점인 ${lossPrice.toPlainString()}원보다 낮습니다. (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.")
             }
-          else -> Mono.empty()
+          else -> Mono.fromCallable { workerTradeResult }
         }
-      }.repeatWhenEmpty((this.tradePhase.phase1.waitMinute * 60 / this.watchIntervalSecond).toInt() - 60) {
-        it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
-      }.onErrorResume(IllegalStateException::class.java) {
-        logger.info("코인이 판매점에 도달하지 못했습니다. 현재 매도 주문을 취소하고, Phase 2 로 진입합니다.")
-        Mono.fromCallable { workerTradeResult }
+      }.delayElement(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
+      .repeat { isEnd.get() || LocalDateTime.now() >= endTime }
+      .last()
+      .flatMap {
+        if (!isEnd.get()) {
+          logger.info("코인이 판매점에 도달하지 못했습니다. 현재 매도 주문을 취소하고, Phase 2 로 진입합니다.")
+        }
+        Mono.fromCallable { it }
       }
   }
 
@@ -135,29 +141,36 @@ class WorkerService(
       OrderStep.calculateOrderStepPrice(this.tradePhase.phase2.getLossPrice(it)),
       OrderStep.calculateOrderStepPrice(it)
     )}
+    val (isEnd, endTime) = AtomicBoolean(false) to LocalDateTime.now().plusMinutes(this.tradePhase.phase2.waitMinute)
     return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
       .flatMap { status ->
         this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, status.currentPrice, buyPrice, logger)
         when {
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
+            .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toPlainString()}원보다 높습니다 (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.") }
           status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.STOP_LOSS)
+            .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toPlainString()}원보다 낮습니다 (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.") }
-          else -> Mono.empty()
+          else -> Mono.fromCallable { workerTradeResult }
         }
-      }.repeatWhenEmpty((this.tradePhase.phase2.waitMinute * 60 / this.watchIntervalSecond).toInt() - 60) {
-        it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
-      }.onErrorResume(IllegalStateException::class.java) {
-        logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithScale(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
-        this.priceTracker.getCoinCurrentPrice(workerTradeResult)
-          .flatMap { currentPrice ->
-            val profit = workerTradeResult.buy.totalPrice() - (currentPrice * workerTradeResult.buy.avgPrice()) - (workerTradeResult.buy.paidFee * BigDecimal(2.0))
-            val type = if (profit > BigDecimal.ZERO) SellType.TIMEOUT_PROFIT else SellType.TIMEOUT_LOSS
-            this.trader.sellMarket(workerTradeResult, type)
-              .doOnNext { logger.info("시간초과 ${if (currentPrice > it.buy.avgPrice()) "이익" else "손실"} 매도가 완료되었습니다.") }
-          }
+      }.repeat { isEnd.get() || LocalDateTime.now() > endTime }
+      .last()
+      .flatMap {
+        if (!isEnd.get()) {
+          logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithScale(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
+          this.priceTracker.getCoinCurrentPrice(workerTradeResult)
+            .flatMap { currentPrice ->
+              val profit = workerTradeResult.buy.totalPrice() - (currentPrice * workerTradeResult.buy.avgPrice()) - (workerTradeResult.buy.paidFee * BigDecimal(2.0))
+              val type = if (profit > BigDecimal.ZERO) SellType.TIMEOUT_PROFIT else SellType.TIMEOUT_LOSS
+              this.trader.sellMarket(workerTradeResult, type)
+                .doOnNext { logger.info("시간초과 ${if (currentPrice > it.buy.avgPrice()) "이익" else "손실"} 매도가 완료되었습니다.") }
+            }
+        } else {
+          Mono.fromCallable { it }
+        }
       }
   }
 
