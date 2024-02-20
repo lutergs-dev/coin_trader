@@ -8,6 +8,7 @@ import dev.lutergs.santa.util.SellType
 import dev.lutergs.santa.util.toStrWithScale
 import dev.lutergs.santa.util.toStrWithStripTrailing
 import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
+import jakarta.annotation.PostConstruct
 import org.slf4j.Logger
 import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
@@ -48,7 +49,7 @@ class WorkerService(
     val isSellPoint = this.movingAverageBig >= movingAverageSmall
   }
 
-//  @PostConstruct
+  @PostConstruct
   fun run() {
     this.buyCoin()
       .flatMap { buyOrder -> this.phase1(buyOrder) }
@@ -122,7 +123,7 @@ class WorkerService(
   }
 
 
-  fun sendDangerousCoin(workerTradeResult: WorkerTradeResult, logger: Logger = this.p1Logger): Mono<WorkerTradeResult> {
+  private fun sendDangerousCoin(workerTradeResult: WorkerTradeResult, logger: Logger = this.p1Logger): Mono<WorkerTradeResult> {
     return when (workerTradeResult.sellType) {
       SellType.LOSS -> this.alarmSender.sendAlarm(DangerCoinMessage.fromOrderResponse(workerTradeResult.sell!!))
         .doOnNext { logger.info("손실 매도한 코인 (${this.mainTrade.market.quote}) 에 대한 정보를 controller 로 전송했습니다.") }
@@ -134,7 +135,7 @@ class WorkerService(
   /**
    * 한시간 반 동안, 구매 가격보다 높으면 무조건 매매
    * */
-  fun phase2(workerTradeResult: WorkerTradeResult, logger: Logger = this.p2Logger): Mono<WorkerTradeResult> {
+  private fun phase2(workerTradeResult: WorkerTradeResult, logger: Logger = this.p2Logger): Mono<WorkerTradeResult> {
     logger.info("지금부터 구매평균가의 ${this.tradePhase.phase2.profitPercent}% 이상 이득을 보면서 상승추세가 꺾일 경우, ${this.tradePhase.phase2.lossPercent}% 이하로 손실을 볼 경우 매매합니다.")
     val (profitPrice, lossPrice, buyPrice) = workerTradeResult.buy.avgPrice().let { Triple(
       OrderStep.calculateOrderStepPrice(this.tradePhase.phase2.getProfitPrice(it)),
