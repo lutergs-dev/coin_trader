@@ -27,6 +27,9 @@ custom:
         wait-minute: ${PHASE_2_WAIT_MINUTE:90}
         profit-percent: ${PHASE_2_PROFIT_PERCENT:0.1}
         loss-percent: ${PHASE_2_LOSS_PERCENT:2.0}
+      profit-moving-average:
+        big: ${PROFIT_MOVING_AVERAGE_BIG:30}
+        small: ${PROFIT_MOVING_AVERAGE_SMALL:10}
   manager:
     url: ${MANAGER_URL:'http://localhost'}
   upbit:
