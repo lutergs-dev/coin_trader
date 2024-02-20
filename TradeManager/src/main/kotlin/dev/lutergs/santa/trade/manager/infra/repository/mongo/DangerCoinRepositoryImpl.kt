@@ -53,14 +53,13 @@ class DangerCoinRepositoryImpl(
     return this.repository.findAll()
       .retryWhen(Retry.fixedDelay(5, Duration.ofSeconds(1)))
       // TODO : Oracle MongoDB 호환 API 가 TTL 을 공식적으로 지원하지 않기 때문에, 이렇게 처리함
-      .flatMap {
+      .filterWhen {
         if (it.expireIn12h.plusHours(12) < OffsetDateTime.now()) {
-          this.repository.delete(it).thenReturn(it)
+          this.repository.delete(it).thenReturn(false)
         } else {
-          Mono.fromCallable { it }
+          Mono.just(true)
         }
-      }
-      .doOnError { this.logger.error("error occured when find danger coins!", it) }
+      }.doOnError { this.logger.error("error occured when find danger coins!", it) }
       .flatMap { Mono.fromCallable { it.toDangerCoin() } }
   }
 }
