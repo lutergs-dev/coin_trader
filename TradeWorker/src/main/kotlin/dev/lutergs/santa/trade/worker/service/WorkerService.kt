@@ -59,7 +59,7 @@ class WorkerService(
         else { Mono.just(it) }
       }.flatMap { this.manager.executeNewWorker() }
       .doOnTerminate { this.closeApplication() }
-      .subscribe()
+      .block()
   }
 
   private fun buyCoin(): Mono<WorkerTradeResult> {
@@ -111,7 +111,7 @@ class WorkerService(
           else -> Mono.fromCallable { workerTradeResult }
         }
       }.delayElement(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
-      .repeat { isEnd.get() || LocalDateTime.now() >= endTime }
+      .repeat { !isEnd.get() && LocalDateTime.now() < endTime }
       .last()
       .flatMap {
         if (!isEnd.get()) {
@@ -156,7 +156,8 @@ class WorkerService(
               logger.info("손실 매도가 완료되었습니다.") }
           else -> Mono.fromCallable { workerTradeResult }
         }
-      }.repeat { isEnd.get() || LocalDateTime.now() > endTime }
+      }.delayElement(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
+      .repeat { !isEnd.get() && LocalDateTime.now() < endTime }
       .last()
       .flatMap {
         if (!isEnd.get()) {
