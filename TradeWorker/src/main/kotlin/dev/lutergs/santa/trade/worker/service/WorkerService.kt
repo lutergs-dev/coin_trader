@@ -89,36 +89,29 @@ class WorkerService(
       OrderStep.calculateOrderStepPrice(this.tradePhase.phase1.getLossPrice(it)),
       OrderStep.calculateOrderStepPrice(it)
     )}
-    return this.trader.placeSellLimit(workerTradeResult, lossPrice)
-      .doOnNext { logger.info("코인의 손실점을 설정했습니다. " +
-        "가격 : ${profitPrice.toPlainString()}, 총금액 : ${it.buy.totalPrice().toStrWithScale(4)}. " +
-        "앞으로 2시간 반동안, 코인의 가격이 ${profitPrice.toPlainString()} (이득주문점) 에 도달하면 상승장이 꺾일 때, ${lossPrice.toPlainString()} (손실점) 에 도달하면 판매합니다.")
-      }.flatMap { wtr ->
-        Mono.zip(
-          Mono.defer { this.trader.getSellLimitStatus(wtr) },
-          Mono.defer { this.getCurrentPriceAndMovingAverage(wtr) }
-        ).flatMap {
-          val (orderStatus, priceDetail) = it.t1 to it.t2
-          this.logCurrentStatus(wtr.buy.createdAt, profitPrice, lossPrice, priceDetail.currentPrice, buyPrice, logger)
-          when {
-            // 이득점 도달시, 이동평균추세가 꺾이면 판매
-            priceDetail.currentPrice >= profitPrice && priceDetail.isSellPoint -> this.trader.cancelSellLimit(wtr)
-              .doOnNext { logger.info("코인의 이득점이 넘었고, 상승장이 꺾였기 때문에 손실매도 주문을 취소했습니다.") }
-              .flatMap { this.trader.sellMarket(wtr, SellType.PROFIT) }
-              .doOnNext { logger.info("코인의 이득 판매가 완료되었습니다.") }
-            // 손실점 도달시 자동 종료
-            orderStatus.isFinished() -> wtr.completeSellOrder(orderStatus, SellType.LOSS)
-              .let { w -> this.trader.finishSellLimit(w) }
-              .doOnNext { logger.info("코인이 ${this.tradePhase.phase1.lossPercent.toStrWithStripTrailing()}% 이상 손해를 봐서, 손실매도했습니다.") }
-            else -> Mono.empty()
-          }
-        }.repeatWhenEmpty((this.tradePhase.phase1.waitMinute * 60 / this.watchIntervalSecond).toInt()) {
-          it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
-        }.onErrorResume(IllegalStateException::class.java) {
-          logger.info("코인이 판매점에 도달하지 못했습니다. 현재 매도 주문을 취소하고, Phase 2 로 진입합니다.")
-          this.trader.cancelSellLimit(wtr)
-            .doOnNext { logger.info("코인의 매도 주문을 취소했습니다.") }
+    return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
+      .flatMap { status ->
+        this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, status.currentPrice, buyPrice, logger)
+        when {
+          // 이득점 도달시, 이동평균추세가 꺾이면 판매
+          status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
+            .doOnNext {
+              logger.info("코인이 이득점인 ${profitPrice.toPlainString()}원보다 높고, 상승추세가 꺾였습니다. (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
+              logger.info("이익 매도가 완료되었습니다.")
+            }
+          // 손실점 도달시 판매
+          status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.STOP_LOSS)
+            .doOnNext {
+              logger.info("코인이 손실점인 ${lossPrice.toPlainString()}원보다 낮습니다. (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
+              logger.info("손실 매도가 완료되었습니다.")
+            }
+          else -> Mono.empty()
         }
+      }.repeatWhenEmpty((this.tradePhase.phase1.waitMinute * 60 / this.watchIntervalSecond).toInt() - 60) {
+        it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
+      }.onErrorResume(IllegalStateException::class.java) {
+        logger.info("코인이 판매점에 도달하지 못했습니다. 현재 매도 주문을 취소하고, Phase 2 로 진입합니다.")
+        Mono.fromCallable { workerTradeResult }
       }
   }
 
@@ -154,7 +147,7 @@ class WorkerService(
               logger.info("손실 매도가 완료되었습니다.") }
           else -> Mono.empty()
         }
-      }.repeatWhenEmpty((this.tradePhase.phase2.waitMinute * 60 / this.watchIntervalSecond).toInt()) {
+      }.repeatWhenEmpty((this.tradePhase.phase2.waitMinute * 60 / this.watchIntervalSecond).toInt() - 60) {
         it.delayElements(Duration.ofSeconds(this.watchIntervalSecond.toLong()))
       }.onErrorResume(IllegalStateException::class.java) {
         logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithScale(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
