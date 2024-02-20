@@ -2,6 +2,7 @@ package dev.lutergs.santa.trade.manager.domain.entity
 
 import dev.lutergs.santa.util.*
 import dev.lutergs.upbitclient.api.exchange.order.OrderResponse
+import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
 import java.math.BigDecimal
 
 
@@ -20,9 +21,9 @@ class ManagerTradeResult(
     return if (sellType.isFinished()) {
       val profitStr = if (this.isProfit()) "이득" else "손해"
       "[${this.buy.createdAt.toHourAndMinuteString()}] " +
-        "${this.coin} ${this.buy.avgPrice().toStrWithStripTrailing()} 에 매수, " +
-        "${this.sell?.avgPrice()?.toStrWithStripTrailing()} 에 ${this.sellType.toInfoString()} 매도, " +
-        "${this.profit!!.toStrWithStripTrailing()} 원 $profitStr"
+        "${this.coin} ${this.buy.avgPrice().let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()} 에 매수, " +
+        "${this.sell?.avgPrice()?.let { OrderStep.calculateOrderStepPrice(it) }?.toStrWithStripTrailing()} 에 ${this.sellType.toInfoString()} 매도, " +
+        "${this.profit?.toStrWithScale(2)} 원 $profitStr"
     } else {
       // 주문완료되지 않은 것에 대한 String은...?
       "[${this.buy.createdAt.toHourAndMinuteString()}] " +

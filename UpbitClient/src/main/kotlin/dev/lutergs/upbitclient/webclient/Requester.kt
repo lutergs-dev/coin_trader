@@ -7,12 +7,12 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import dev.lutergs.upbitclient.api.Param
 import dev.lutergs.upbitclient.dto.*
 import org.springframework.http.codec.json.Jackson2JsonDecoder
+import org.springframework.web.reactive.function.client.ClientResponse.Headers
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.util.UUID
 import kotlin.reflect.KClass
 
 class Requester(
@@ -55,7 +55,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(String::class.java)
-      .doOnError (WebClientResponseException::class.java) {
+      .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
   }
@@ -75,8 +75,9 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(String::class.java)
-      .doOnError (WebClientResponseException::class.java) {
-        println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")      }
+      .doOnError(WebClientResponseException::class.java) {
+        println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
+      }
   }
 
   fun <T : Any> getSingle(path: String, param: Param? = null, responseClass: KClass<T>): Mono<T> {
@@ -94,7 +95,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(responseClass.java)
-      .doOnError (WebClientResponseException::class.java) {
+      .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
   }
@@ -114,7 +115,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToFlux(responseClass.java)
-      .doOnError (WebClientResponseException::class.java) {
+      .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
   }
@@ -134,7 +135,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(responseClass.java)
-      .doOnError (WebClientResponseException::class.java) {
+      .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
   }
@@ -154,8 +155,12 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(responseClass.java)
-      .doOnError (WebClientResponseException::class.java) {
+      .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
+  }
+
+  fun extractRequestLimitOnSecond(headers: Headers): Int {
+    return headers.header("Remaining-Req")[0].split(";")[2].split("=")[1].trim().toInt()
   }
 }

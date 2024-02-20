@@ -17,13 +17,19 @@ data class TradeWatchConfig(
 
 data class TradeSellConfig(
   @NestedConfigurationProperty val phase1: PhaseConfig,
-  @NestedConfigurationProperty val phase2: PhaseConfig
+  @NestedConfigurationProperty val phase2: PhaseConfig,
+  @NestedConfigurationProperty val profitMovingAverage: ProfitMovingAverage
 )
 
 data class PhaseConfig(
   val waitMinute: Long,
   val profitPercent: String,
   val lossPercent: String
+)
+
+data class ProfitMovingAverage(
+  val big: Int,
+  val small: Int
 )
 
 

@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.1.1"
+version = "0.1.2"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -24,6 +24,7 @@ dependencies {
   implementation(project(":Util"))
 
   implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.2")
+  implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.0.4")
   implementation("org.springframework.kafka:spring-kafka:3.0.10")
 
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")

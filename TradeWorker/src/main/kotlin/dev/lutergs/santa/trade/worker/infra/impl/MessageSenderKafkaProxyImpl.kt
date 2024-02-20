@@ -1,8 +1,11 @@
-package dev.lutergs.santa.trade.worker.infra
+package dev.lutergs.santa.trade.worker.infra.impl
 
 import dev.lutergs.santa.trade.worker.domain.MessageSender
 import dev.lutergs.santa.trade.worker.domain.entity.DangerCoinMessage
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResultMessage
+import dev.lutergs.santa.trade.worker.infra.KafkaMessage
+import dev.lutergs.santa.trade.worker.infra.KafkaMessageResponse
+import dev.lutergs.santa.trade.worker.infra.KafkaProxyMessageSender
 import reactor.core.publisher.Mono
 
 class MessageSenderKafkaProxyImpl(

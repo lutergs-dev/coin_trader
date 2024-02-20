@@ -1,7 +1,9 @@
-package dev.lutergs.santa.trade.worker.infra
+package dev.lutergs.santa.trade.worker.infra.impl
 
 import dev.lutergs.santa.trade.worker.domain.Trader
 import dev.lutergs.santa.trade.worker.domain.entity.WorkerTradeResult
+import dev.lutergs.santa.trade.worker.infra.KafkaMessage
+import dev.lutergs.santa.trade.worker.infra.KafkaProxyMessageSender
 import dev.lutergs.santa.util.SellType
 import dev.lutergs.santa.util.toStrWithStripTrailing
 import dev.lutergs.upbitclient.api.exchange.order.OrderRequest
@@ -12,7 +14,6 @@ import dev.lutergs.upbitclient.dto.OrderSide
 import dev.lutergs.upbitclient.dto.OrderType
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Duration
@@ -28,18 +29,18 @@ class TraderImpl (
   private val logger = LoggerFactory.getLogger(TraderImpl::class.java)
 
   // 현재 보유한 코인을 시장가로 판매
-  override fun sellMarket(tradeResult: WorkerTradeResult, sellType: SellType): Mono<WorkerTradeResult> {
-    return PlaceOrderRequest(tradeResult.buy.market, OrderType.MARKET, OrderSide.ASK, volume = tradeResult.buy.totalVolume())
+  override fun sellMarket(wtr: WorkerTradeResult, sellType: SellType): Mono<WorkerTradeResult> {
+    return PlaceOrderRequest(wtr.buy.market, OrderType.MARKET, OrderSide.ASK, volume = wtr.buy.totalVolume())
       .let { req ->
         this.client.order.placeOrder(req)
           .flatMap { this.waitOrderUntilComplete(it.uuid) }
-          .flatMap { Mono.fromCallable { tradeResult.completeSellOrder(it, sellType) } }
+          .flatMap { Mono.fromCallable { wtr.completeSellOrder(it, sellType) } }
           .doOnNext {  }
           .flatMap {
             this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
               .thenReturn(it)
               .onErrorResume { err ->
-                this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${tradeResult}, sellType: ${sellType.name}", err)
+                this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${wtr}, sellType: ${sellType.name}", err)
                 Mono.fromCallable { it }
               }
           }
@@ -64,40 +65,48 @@ class TraderImpl (
   }
 
   // 지정가 매도 주문 실행
-  override fun placeSellLimit(tradeResult: WorkerTradeResult, price: BigDecimal): Mono<WorkerTradeResult> {
-    return PlaceOrderRequest(tradeResult.buy.market, OrderType.LIMIT, OrderSide.ASK, tradeResult.buy.totalVolume(), price.stripTrailingZeros())
+  override fun placeSellLimit(wtr: WorkerTradeResult, price: BigDecimal): Mono<WorkerTradeResult> {
+    return PlaceOrderRequest(wtr.buy.market, OrderType.LIMIT, OrderSide.ASK, wtr.buy.totalVolume(), price.stripTrailingZeros())
       .let { this.client.order.placeOrder(it) }
       .flatMap { this.client.order.getOrder(OrderRequest(it.uuid)) }
-      .flatMap { Mono.fromCallable { tradeResult.sellLimitOrderPlaced(it) } }
+      .flatMap { Mono.fromCallable { wtr.sellLimitOrderPlaced(it) } }
       .flatMap {
         this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
           .thenReturn(it)
           .onErrorResume { err ->
-            this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${tradeResult}, price: ${price.toStrWithStripTrailing()}", err)
+            this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${wtr}, price: ${price.toStrWithStripTrailing()}", err)
             Mono.fromCallable { it }
           }
       }
   }
 
+  override fun getSellLimitStatus(wtr: WorkerTradeResult): Mono<OrderResponse> {
+    return if (wtr.sell != null && wtr.sell?.orderType == OrderType.LIMIT) {
+      this.client.order.getOrder(OrderRequest(wtr.sell!!.uuid))
+    } else {
+      throw IllegalStateException("매도 주문이 없거나, 지정가 주문이 아닙니다.")
+    }
+  }
+
   // 지정가 매도 주문이 완료되었을 때 데이터 기록
-  override fun finishSellLimit(tradeResult: WorkerTradeResult): Mono<WorkerTradeResult> {
-    return this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = tradeResult.buy.uuid.toString(), value = tradeResult))
-      .thenReturn(tradeResult)
+  override fun finishSellLimit(wtr: WorkerTradeResult): Mono<WorkerTradeResult> {
+    return this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = wtr.buy.uuid.toString(), value = wtr))
+      .thenReturn(wtr)
       .onErrorResume { err ->
-        this.logger.error("지정가 매도 주문 Kafka 전송시 에러가 발생했습니다! dto : $tradeResult", err)
-        Mono.fromCallable { tradeResult }
+        this.logger.error("지정가 매도 주문 Kafka 전송시 에러가 발생했습니다! dto : $wtr", err)
+        Mono.fromCallable { wtr }
       }
   }
 
   // 지정가 매도 주문 취소
-  override fun cancelSellLimit(tradeResult: WorkerTradeResult): Mono<WorkerTradeResult> {
-    return if (tradeResult.sellType == SellType.PLACED) {
-      this.client.order.cancelOrder(OrderRequest(tradeResult.sell!!.uuid))
-        .flatMap { Mono.fromCallable { tradeResult.cancelSellOrder() } }
+  override fun cancelSellLimit(wtr: WorkerTradeResult): Mono<WorkerTradeResult> {
+    return if (wtr.sellType == SellType.PLACED) {
+      this.client.order.cancelOrder(OrderRequest(wtr.sell!!.uuid))
+        .flatMap { Mono.fromCallable { wtr.cancelSellOrder() } }
         .flatMap {
           this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
             .thenReturn(it).onErrorResume { err ->
-              this.logger.error("지정가 매도주문 취소 Kafka 전송시 에러가 발생했습니다! dto : ${tradeResult}", err)
+              this.logger.error("지정가 매도주문 취소 Kafka 전송시 에러가 발생했습니다! dto : ${wtr}", err)
               Mono.fromCallable { it }
             }
         }

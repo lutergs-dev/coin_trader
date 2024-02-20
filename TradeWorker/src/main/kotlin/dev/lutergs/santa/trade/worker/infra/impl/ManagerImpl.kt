@@ -1,4 +1,4 @@
-package dev.lutergs.santa.trade.worker.infra
+package dev.lutergs.santa.trade.worker.infra.impl
 
 import dev.lutergs.santa.trade.worker.domain.Manager
 import org.slf4j.LoggerFactory
