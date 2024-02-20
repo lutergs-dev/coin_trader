@@ -106,7 +106,7 @@ class TraderImpl (
         .flatMap {
           this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
             .thenReturn(it).onErrorResume { err ->
-              this.logger.error("지정가 매도주문 취소 Kafka 전송시 에러가 발생했습니다! dto : ${wtr}", err)
+              this.logger.error("지정가 매도주문 취소 Kafka 전송시 에러가 발생했습니다! dto : $wtr", err)
               Mono.fromCallable { it }
             }
         }

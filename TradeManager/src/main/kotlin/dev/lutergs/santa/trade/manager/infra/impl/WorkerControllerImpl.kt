@@ -9,7 +9,6 @@ import io.kubernetes.client.openapi.ApiException
 import io.kubernetes.client.openapi.apis.BatchV1Api
 import io.kubernetes.client.openapi.models.*
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Component
 
 
 data class KubernetesInfo(

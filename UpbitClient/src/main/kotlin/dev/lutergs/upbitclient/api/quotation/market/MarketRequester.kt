@@ -2,11 +2,9 @@ package dev.lutergs.upbitclient.api.quotation.market
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import dev.lutergs.upbitclient.api.Param
 import dev.lutergs.upbitclient.api.RequestDao
 import dev.lutergs.upbitclient.dto.MarketCode
-import dev.lutergs.upbitclient.dto.MarketCodeDeserializer
 import dev.lutergs.upbitclient.webclient.Requester
 import reactor.core.publisher.Flux
 

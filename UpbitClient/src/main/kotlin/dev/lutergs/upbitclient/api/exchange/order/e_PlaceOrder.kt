@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.deser.std.UUIDDeserializer
-import com.fasterxml.jackson.databind.ser.std.UUIDSerializer
 import dev.lutergs.upbitclient.dto.*
 import java.math.BigDecimal
 import java.time.OffsetDateTime
@@ -20,7 +18,7 @@ import java.util.UUID
  * @author LuterGS(lutergs@lutergs.dev)
  * @property uuid                  주문의 고유 아이디
  * @property side                  주문 종류
- * @property ordType               주문 방식
+ * @property orderType             주문 방식
  * @property price                 주문 당시 화폐 가격
  * @property state                 주문 상태
  * @property market                마켓의 유일키

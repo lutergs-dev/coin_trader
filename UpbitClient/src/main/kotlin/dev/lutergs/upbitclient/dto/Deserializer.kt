@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 class TickerDateDeserializer: JsonDeserializer<LocalDate>() {
@@ -101,12 +100,6 @@ class MarketCodeSerializer: JsonSerializer<MarketCode>() {
     gen.writeString(value.toString())
   }
 
-}
-
-class OffsetDateTimeDeserializer: JsonDeserializer<OffsetDateTime>() {
-  override fun deserialize(p: JsonParser, ctxt: DeserializationContext): OffsetDateTime {
-    return p.text.let { OffsetDateTime.parse(it) }
-  }
 }
 
 

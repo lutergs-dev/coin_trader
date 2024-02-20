@@ -1,7 +1,6 @@
 package dev.lutergs.santa.trade.manager.infra.controller
 
 import dev.lutergs.santa.trade.manager.service.AnalyticService
-import dev.lutergs.santa.trade.manager.service.DangerControlService
 import dev.lutergs.santa.trade.manager.service.ManagerService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

@@ -4,9 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.fasterxml.jackson.databind.deser.std.UUIDDeserializer
-import com.fasterxml.jackson.databind.ser.std.UUIDSerializer
-import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
 import dev.lutergs.upbitclient.dto.*
 import java.math.BigDecimal
 import java.time.OffsetDateTime

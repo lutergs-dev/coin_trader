@@ -2,7 +2,6 @@ package dev.lutergs.upbitclient.api.quotation.candle
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import reactor.core.publisher.Flux
 import java.math.BigDecimal
 
 /**

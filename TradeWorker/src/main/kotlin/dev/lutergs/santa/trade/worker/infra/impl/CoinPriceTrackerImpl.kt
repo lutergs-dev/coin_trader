@@ -4,19 +4,11 @@ import dev.lutergs.santa.trade.worker.domain.CoinPriceTracker
 import dev.lutergs.santa.trade.worker.domain.entity.WorkerTradeResult
 import dev.lutergs.santa.trade.worker.infra.repository.MongoCoinPriceEntity
 import dev.lutergs.santa.trade.worker.infra.repository.MongoCoinPriceReactiveRepository
-import dev.lutergs.santa.util.toStrWithScale
-import dev.lutergs.santa.util.toStrWithStripTrailing
-import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
-import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
-import jakarta.annotation.PostConstruct
-import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
-import java.time.Duration
-import java.time.OffsetDateTime
 import java.util.*
 
 class CoinPriceTrackerImpl(
@@ -52,7 +44,6 @@ class CoinPriceTrackerImpl(
 
   override fun cleanUp(buyUUID: UUID): Mono<Void> {
     return this.repository.findAllByTradeId(buyUUID)
-      .flatMap { this.repository.delete(it) }
-      .last()
+      .let { this.repository.deleteAll(it) }
   }
 }
