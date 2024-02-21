@@ -51,5 +51,5 @@ class MongoCoinPriceEntity {
 @Repository
 interface MongoCoinPriceReactiveRepository: ReactiveMongoRepository<MongoCoinPriceEntity, UUID> {
   fun findAllByTradeId(tradeId: UUID): Flux<MongoCoinPriceEntity>
-  fun findAllByTradeIdOrderByExpireIn5h(tradeId: UUID, pageable: Pageable): Flux<MongoCoinPriceEntity>
+  fun findAllByTradeIdOrderByExpireIn5hDesc(tradeId: UUID, pageable: Pageable): Flux<MongoCoinPriceEntity>
 }
