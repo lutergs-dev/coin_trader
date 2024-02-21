@@ -61,6 +61,7 @@ class WorkerService(
       .then(Mono.defer { this.manager.executeNewWorker() })
       .doOnTerminate { this.closeApplication() }
       .block()
+    this.closeApplication()
   }
 
   private fun buyCoin(): Mono<WorkerTradeResult> {
@@ -99,14 +100,14 @@ class WorkerService(
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext {
-              logger.info("코인이 이득점인 ${profitPrice.toPlainString()}원보다 높고, 상승추세가 꺾였습니다. (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
+              logger.info("코인이 이득점인 ${profitPrice.toStrWithStripTrailing()}원보다 높고, 상승추세가 꺾였습니다. (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.")
             }
           // 손실점 도달시 판매
           status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.STOP_LOSS)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext {
-              logger.info("코인이 손실점인 ${lossPrice.toPlainString()}원보다 낮습니다. (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
+              logger.info("코인이 손실점인 ${lossPrice.toStrWithStripTrailing()}원보다 낮습니다. (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.")
             }
           else -> Mono.fromCallable { workerTradeResult }
@@ -149,11 +150,11 @@ class WorkerService(
         when {
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
-            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toPlainString()}원보다 높습니다 (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithStripTrailing()}원보다 높습니다 (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.") }
           status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.STOP_LOSS)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
-            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toPlainString()}원보다 낮습니다 (${status.currentPrice.toPlainString()}원). 현재 가격으로 매도했습니다.")
+            .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toStrWithStripTrailing()}원보다 낮습니다 (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.") }
           else -> Mono.fromCallable { workerTradeResult }
         }

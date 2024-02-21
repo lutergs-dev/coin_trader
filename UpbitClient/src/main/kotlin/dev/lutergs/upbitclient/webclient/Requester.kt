@@ -13,6 +13,8 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.util.retry.Retry
+import java.time.Duration
 import kotlin.reflect.KClass
 
 class Requester(
@@ -55,6 +57,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(String::class.java)
+      .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
       .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
@@ -75,6 +78,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(String::class.java)
+      .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
       .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
@@ -95,6 +99,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(responseClass.java)
+      .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
       .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
@@ -115,6 +120,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToFlux(responseClass.java)
+      .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
       .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
@@ -135,6 +141,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(responseClass.java)
+      .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
       .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
@@ -155,6 +162,7 @@ class Requester(
       .header("Authorization", this.tokenGenerator.createJWT(param))
       .retrieve()
       .bodyToMono(responseClass.java)
+      .retryWhen(Retry.backoff(5, Duration.ofSeconds(1)))
       .doOnError(WebClientResponseException::class.java) {
         println("error on requesting [${it.request?.method}] ${it.request?.uri}\nresponse: ${it.responseBodyAsString}")
       }
