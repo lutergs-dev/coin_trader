@@ -12,6 +12,7 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.Logger
 import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Duration
@@ -94,7 +95,7 @@ class WorkerService(
     val (isEnd, endTime) = AtomicBoolean(false) to LocalDateTime.now().plusMinutes(this.tradePhase.phase1.waitMinute)
     return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
       .flatMap { status ->
-        this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, status.currentPrice, buyPrice, logger)
+        this.logCurrentStatus2(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
         when {
           // 이득점 도달시, 이동평균추세가 꺾이면 판매
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
@@ -146,7 +147,7 @@ class WorkerService(
     val (isEnd, endTime) = AtomicBoolean(false) to LocalDateTime.now().plusMinutes(this.tradePhase.phase2.waitMinute)
     return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
       .flatMap { status ->
-        this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, status.currentPrice, buyPrice, logger)
+        this.logCurrentStatus2(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
         when {
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
@@ -192,6 +193,34 @@ class WorkerService(
               "경과시간: $hours 시간 $minutes 분 $secs 초")
           }
       }
+  }
+
+  private fun logCurrentStatus2(
+    dt: OffsetDateTime,
+    profit: BigDecimal,
+    loss: BigDecimal,
+    buy: BigDecimal,
+    status: CurrentOrderExecuteStatus,
+    logger: Logger
+  ) {
+    val curTime = LocalDateTime.now()
+    val printStr = Duration.between(dt.atZoneSameInstant(ZoneId.of("Asia/Seoul")).toLocalDateTime(), curTime)
+      .let { d ->
+        val hours = d.toHours()
+        val minutes = d.toMinutes() % 60
+        val secs = d.seconds % 60
+          "이득가: ${profit.toStrWithStripTrailing()}, 손실가: ${loss.toStrWithStripTrailing()}, " +
+            "현재가: ${status.currentPrice.toStrWithStripTrailing()}, 구매가: ${buy.toStrWithStripTrailing()} " +
+            "경과시간: $hours 시간 $minutes 분 $secs 초"
+      }
+    if (status.currentPrice > profit) {
+      logger.info("$printStr | 최근평균 : " +
+        "30개 ${status.movingAverageBig.let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()}, " +
+        "10개 ${status.movingAverageSmall.let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()}")
+      // print average
+    } else if (curTime.second < this.watchIntervalSecond) {
+      logger.info(printStr)
+    }
   }
 
   private fun closeApplication() {
