@@ -95,7 +95,7 @@ class WorkerService(
     val (isEnd, endTime) = AtomicBoolean(false) to LocalDateTime.now().plusMinutes(this.tradePhase.phase1.waitMinute)
     return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
       .flatMap { status ->
-        this.logCurrentStatus2(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
+        this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
         when {
           // 이득점 도달시, 이동평균추세가 꺾이면 판매
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
@@ -147,7 +147,7 @@ class WorkerService(
     val (isEnd, endTime) = AtomicBoolean(false) to LocalDateTime.now().plusMinutes(this.tradePhase.phase2.waitMinute)
     return Mono.defer { this.getCurrentPriceAndMovingAverage(workerTradeResult) }
       .flatMap { status ->
-        this.logCurrentStatus2(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
+        this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
         when {
           status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
@@ -178,24 +178,7 @@ class WorkerService(
       }
   }
 
-  private fun logCurrentStatus(dt: OffsetDateTime, profit: BigDecimal, loss: BigDecimal, current: BigDecimal, buy: BigDecimal, logger: Logger) {
-    LocalDateTime.now()
-      .takeIf { it.second < this.watchIntervalSecond }
-      ?.let {
-        Duration.between(dt.atZoneSameInstant(ZoneId.of("Asia/Seoul")).toLocalDateTime(), it)
-          .let { d ->
-            val hours = d.toHours()
-            val minutes = d.toMinutes() % 60
-            val secs = d.seconds % 60
-            logger.info(
-              "이득가: ${profit.toStrWithStripTrailing()}, 손실가: ${loss.toStrWithStripTrailing()}, " +
-              "현재가: ${current.toStrWithStripTrailing()}, 구매가: ${buy.toStrWithStripTrailing()} " +
-              "경과시간: $hours 시간 $minutes 분 $secs 초")
-          }
-      }
-  }
-
-  private fun logCurrentStatus2(
+  private fun logCurrentStatus(
     dt: OffsetDateTime,
     profit: BigDecimal,
     loss: BigDecimal,
@@ -203,24 +186,24 @@ class WorkerService(
     status: CurrentOrderExecuteStatus,
     logger: Logger
   ) {
-    val curTime = LocalDateTime.now()
-    val printStr = Duration.between(dt.atZoneSameInstant(ZoneId.of("Asia/Seoul")).toLocalDateTime(), curTime)
-      .let { d ->
-        val hours = d.toHours()
-        val minutes = d.toMinutes() % 60
-        val secs = d.seconds % 60
-          "이득가: ${profit.toStrWithStripTrailing()}, 손실가: ${loss.toStrWithStripTrailing()}, " +
-            "현재가: ${status.currentPrice.toStrWithStripTrailing()}, 구매가: ${buy.toStrWithStripTrailing()} " +
-            "경과시간: $hours 시간 $minutes 분 $secs 초"
+    LocalDateTime.now()
+      .takeIf { it.second < this.watchIntervalSecond }
+      ?.let { time ->
+        Duration.between(dt.atZoneSameInstant(ZoneId.of("Asia/Seoul")).toLocalDateTime(), time)
+          .let { d ->
+            val hours = d.toHours()
+            val minutes = d.toMinutes() % 60
+            val secs = d.seconds % 60
+            (takeIf { profit <= status.currentPrice }
+              ?.let { "| 최근평균 " +
+                "30개: ${status.movingAverageBig.let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()}, " +
+                "10개: ${status.movingAverageSmall.let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()}" }
+              ?: ""
+            ).let { logger.info("이득가: ${profit.toStrWithStripTrailing()}, 손실가: ${loss.toStrWithStripTrailing()}, " +
+                "현재가: ${status.currentPrice.toStrWithStripTrailing()}, 구매가: ${buy.toStrWithStripTrailing()} " +
+                "경과시간: $hours 시간 $minutes 분 $secs 초 $it") }
+          }
       }
-    if (status.currentPrice > profit) {
-      logger.info("$printStr | 최근평균 : " +
-        "30개 ${status.movingAverageBig.let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()}, " +
-        "10개 ${status.movingAverageSmall.let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()}")
-      // print average
-    } else if (curTime.second < this.watchIntervalSecond) {
-      logger.info(printStr)
-    }
   }
 
   private fun closeApplication() {
