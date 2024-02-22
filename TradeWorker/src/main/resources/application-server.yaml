@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://${MONGO_USERNAME:'username'}:${MONGO_PASSWORD:'password'}@${MONGO_URL:'url'}/${MONGO_DATABASE:'db'}?${MONGO_OPTION:'retryWrites=false'}
+      uri: mongodb+srv://${MONGO_USERNAME:'username'}:${MONGO_PASSWORD:'password'}@${MONGO_URL:'url'}/${MONGO_DATABASE:'db'}?${MONGO_OPTION:'retryWrites=false'}
 
 custom:
   id: ${APP_ID:app-id}
