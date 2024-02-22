@@ -26,7 +26,7 @@ class CoinPriceTrackerImpl(
         MongoCoinPriceEntity.fromTickerResponse(workerTradeResult, ticker)
           .let { this.repository.save(it) }
           .thenReturn(ticker.tradePrice)
-      }
+      }.retryWhen(RetrySpec.backoff(5, Duration.ofSeconds(1)))
   }
 
   override fun getCoinEMA(workerTradeResult: WorkerTradeResult): Mono<BigDecimal> {
@@ -39,6 +39,7 @@ class CoinPriceTrackerImpl(
 
   override fun getAvgOfLatestAB(buyUUID: UUID, latestA: Int, latestB: Int): Mono<Pair<BigDecimal, BigDecimal>> {
     return this.repository.findAllByTradeIdOrderByExpireIn5hDesc(buyUUID, Pageable.ofSize(latestA))
+      .retryWhen(RetrySpec.backoff(5, Duration.ofSeconds(1)))
       .collectList()
       .flatMap { list -> Mono.fromCallable { Pair(
         list.take(latestA).let { a -> a.sumOf { it.price } / BigDecimal(a.size) },

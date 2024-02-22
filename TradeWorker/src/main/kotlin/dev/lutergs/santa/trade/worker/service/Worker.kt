@@ -18,6 +18,7 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.system.exitProcess
 
 class Worker(
   // 실행 시 필요한 변수 집합
@@ -52,9 +53,11 @@ class Worker(
       .flatMap {
         if (it.sell == null) { this.phase2(it) }
         else { Mono.just(it) }
-      }.flatMap { this.priceTracker.cleanUp(it.buy.uuid) }
-      .then(Mono.defer { this.manager.executeNewWorker() })
+      }
+//      .flatMap { this.priceTracker.cleanUp(it.buy.uuid) }
+      .flatMap { this.manager.executeNewWorker() }
       .block()
+    exitProcess(0)
   }
 
   private fun buyCoin(): Mono<WorkerTradeResult> {
