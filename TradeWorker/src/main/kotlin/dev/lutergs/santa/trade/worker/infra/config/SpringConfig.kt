@@ -20,7 +20,6 @@ import dev.lutergs.santa.trade.worker.service.Worker
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.math.BigDecimal
@@ -122,8 +121,7 @@ class SpringConfig(
     trader: Trader,
     priceTracker: CoinPriceTracker,
     alarmSender: MessageSender,
-    manager: Manager,
-    applicationContext: ApplicationContext
+    manager: Manager
   ): Worker = Worker(
     mainTrade = mainTrade,
     tradePhase = tradePhase,
@@ -133,8 +131,7 @@ class SpringConfig(
     trader = trader,
     priceTracker = priceTracker,
     alarmSender = alarmSender,
-    manager = manager,
-    applicationContext = applicationContext
+    manager = manager
   )
 }
 

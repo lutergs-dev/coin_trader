@@ -11,8 +11,6 @@ import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
 import org.slf4j.Logger
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
-import org.springframework.boot.SpringApplication
-import org.springframework.context.ApplicationContext
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Duration
@@ -34,9 +32,6 @@ class Worker(
   private val priceTracker: CoinPriceTracker,
   private val alarmSender: MessageSender,
   private val manager: Manager,
-
-  // 기타
-  private val applicationContext: ApplicationContext,
 ): ApplicationRunner {
   private val originLogger = LoggerCreate.createLogger(this::class)
   private val p1Logger = LoggerCreate.createLogger(this::class, "Phase1")
@@ -201,9 +196,5 @@ class Worker(
                 "경과시간: $hours 시간 $minutes 분 $secs 초 $it") }
           }
       }
-  }
-
-  private fun closeApplication() {
-    SpringApplication.exit(this.applicationContext)
   }
 }

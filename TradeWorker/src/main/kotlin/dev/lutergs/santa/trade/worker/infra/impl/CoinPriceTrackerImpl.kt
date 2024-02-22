@@ -4,11 +4,8 @@ import dev.lutergs.santa.trade.worker.domain.CoinPriceTracker
 import dev.lutergs.santa.trade.worker.domain.entity.WorkerTradeResult
 import dev.lutergs.santa.trade.worker.infra.repository.MongoCoinPriceEntity
 import dev.lutergs.santa.trade.worker.infra.repository.MongoCoinPriceReactiveRepository
-import dev.lutergs.santa.util.toStrWithStripTrailing
-import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
 import dev.lutergs.upbitclient.dto.Markets
 import dev.lutergs.upbitclient.webclient.BasicClient
-import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
 import reactor.core.publisher.Mono
