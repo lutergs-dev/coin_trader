@@ -16,7 +16,7 @@ import dev.lutergs.santa.trade.worker.infra.impl.ManagerImpl
 import dev.lutergs.santa.trade.worker.infra.impl.MessageSenderKafkaProxyImpl
 import dev.lutergs.santa.trade.worker.infra.impl.TraderImpl
 import dev.lutergs.santa.trade.worker.infra.repository.MongoCoinPriceReactiveRepository
-import dev.lutergs.santa.trade.worker.service.WorkerService
+import dev.lutergs.santa.trade.worker.service.Worker
 import dev.lutergs.upbitclient.dto.MarketCode
 import dev.lutergs.upbitclient.webclient.BasicClient
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -124,7 +124,7 @@ class SpringConfig(
     alarmSender: MessageSender,
     manager: Manager,
     applicationContext: ApplicationContext
-  ): WorkerService = WorkerService(
+  ): Worker = Worker(
     mainTrade = mainTrade,
     tradePhase = tradePhase,
     watchIntervalSecond = this.tradeConfig.watch.interval.toInt(),

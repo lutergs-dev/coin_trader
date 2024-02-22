@@ -47,5 +47,5 @@ interface CoinPriceTracker {
   fun getCoinEMA(workerTradeResult: WorkerTradeResult): Mono<BigDecimal>
   fun getAvgOfLatestN(buyUUID: UUID, latestN: Int): Mono<BigDecimal>
   fun getAvgOfLatestAB(buyUUID: UUID, latestA: Int, latestB: Int): Mono<Pair<BigDecimal, BigDecimal>>
-  fun cleanUp(buyUUID: UUID): Mono<Void>
+  fun cleanUp(buyUUID: UUID): Mono<Boolean>
 }

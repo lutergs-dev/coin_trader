@@ -8,11 +8,11 @@ import dev.lutergs.santa.util.SellType
 import dev.lutergs.santa.util.toStrWithScale
 import dev.lutergs.santa.util.toStrWithStripTrailing
 import dev.lutergs.upbitclient.api.quotation.orderbook.OrderStep
-import jakarta.annotation.PostConstruct
 import org.slf4j.Logger
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.SpringApplication
 import org.springframework.context.ApplicationContext
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.Duration
@@ -21,7 +21,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.concurrent.atomic.AtomicBoolean
 
-class WorkerService(
+class Worker(
   // 실행 시 필요한 변수 집합
   private val mainTrade: MainTrade,
   private val tradePhase: TradePhase,
@@ -37,7 +37,7 @@ class WorkerService(
 
   // 기타
   private val applicationContext: ApplicationContext,
-) {
+): ApplicationRunner {
   private val originLogger = LoggerCreate.createLogger(this::class)
   private val p1Logger = LoggerCreate.createLogger(this::class, "Phase1")
   private val p2Logger = LoggerCreate.createLogger(this::class, "Phase2")
@@ -50,8 +50,7 @@ class WorkerService(
     val isSellPoint = this.movingAverageBig >= movingAverageSmall
   }
 
-  @PostConstruct
-  fun run() {
+  override fun run(args: ApplicationArguments) {
     this.buyCoin()
       .flatMap { buyOrder -> this.phase1(buyOrder) }
       .flatMap { this.sendDangerousCoin(it) }
@@ -60,9 +59,7 @@ class WorkerService(
         else { Mono.just(it) }
       }.flatMap { this.priceTracker.cleanUp(it.buy.uuid) }
       .then(Mono.defer { this.manager.executeNewWorker() })
-      .doOnTerminate { this.closeApplication() }
       .block()
-    this.closeApplication()
   }
 
   private fun buyCoin(): Mono<WorkerTradeResult> {

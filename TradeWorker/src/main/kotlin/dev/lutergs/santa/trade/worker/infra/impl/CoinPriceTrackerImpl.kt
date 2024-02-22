@@ -11,8 +11,8 @@ import dev.lutergs.upbitclient.webclient.BasicClient
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.util.retry.RetrySpec
 import java.math.BigDecimal
 import java.time.Duration
 import java.util.*
@@ -49,8 +49,10 @@ class CoinPriceTrackerImpl(
       ) } }
   }
 
-  override fun cleanUp(buyUUID: UUID): Mono<Void> {
+  override fun cleanUp(buyUUID: UUID): Mono<Boolean> {
     return this.repository.findAllByTradeId(buyUUID)
       .let { this.repository.deleteAll(it) }
+      .retryWhen(RetrySpec.backoff(5, Duration.ofSeconds(1)))
+      .thenReturn(true)
   }
 }

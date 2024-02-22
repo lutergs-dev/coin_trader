@@ -10,10 +10,9 @@ import org.springframework.context.annotation.ComponentScan
 class TradeWorkerApplication
 
 
-// TODO : Spring Cloud 를 참고해서 lambda 처럼, 단일실행이 가능하도록 변경 필요
 fun main(args: Array<String>) {
   SpringApplicationBuilder(TradeWorkerApplication::class.java)
-//    .web(WebApplicationType.NONE)
+    .web(WebApplicationType.NONE)
     .listeners(ApplicationContextInjector())
-    .run()
+    .run(*args)
 }
