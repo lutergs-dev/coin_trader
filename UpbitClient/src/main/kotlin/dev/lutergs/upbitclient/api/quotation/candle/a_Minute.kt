@@ -64,3 +64,6 @@ data class CandleMinuteResponse(
     }
   }
 }
+
+fun List<CandleMinuteResponse>.getHighPriceCandle(): CandleMinuteResponse = this.maxBy { it.highPrice }
+fun List<CandleMinuteResponse>.getLowPriceCandle(): CandleMinuteResponse = this.minBy { it.lowPrice }
