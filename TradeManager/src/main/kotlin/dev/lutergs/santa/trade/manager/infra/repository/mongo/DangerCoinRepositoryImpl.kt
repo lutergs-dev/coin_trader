@@ -23,7 +23,7 @@ class DangerCoinEntity {
   var coinName: String? = null
 
   @Field
-  @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 12)
+  @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 2)
   var expireIn12h: OffsetDateTime = OffsetDateTime.now()
 
   fun toDangerCoin(): DangerCoin = DangerCoin(this.coinName!!, this.expireIn12h)

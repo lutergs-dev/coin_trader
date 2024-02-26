@@ -24,7 +24,7 @@ class DangerControlService(
       .path("coinName").asText()
       .let { this.dangerCoinRepository.setDangerCoin(it) }
       .flatMap { this.dangerCoinRepository.getDangerCoins().collectList() }
-      .filter { it.size > 3 }
+      .filter { it.size > 10 }
       .flatMap { dangerCoins ->
         this.tradeResultRepository.getAllResultAfterDateTime(OffsetDateTime.now().minusHours(24))
           .filter { it.sellType.isFinished() }

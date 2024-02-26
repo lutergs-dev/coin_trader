@@ -20,10 +20,13 @@ class ManagerTradeResult(
   fun toInfoString(): String {
     return if (sellType.isFinished()) {
       val profitStr = if (this.isProfit()) "이득" else "손해"
-      "[${this.buy.createdAt.toHourAndMinuteString()}] " +
-        "${this.coin} ${this.buy.avgPrice().let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()} 에 매수, " +
-        "${this.sell?.avgPrice()?.let { OrderStep.calculateOrderStepPrice(it) }?.toStrWithStripTrailing()} 에 ${this.sellType.toInfoString()} 매도, " +
-        "${this.profit?.toStrWithScale(2)} 원 $profitStr"
+      "[${this.buy.createdAt.toHourAndMinuteShortStr()} -> " +
+        "${this.sell?.trades?.maxOf { it.createdAt }?.toHourAndMinuteShortStr()}] " +
+        "${this.coin} " +
+        "${this.buy.avgPrice().let { OrderStep.calculateOrderStepPrice(it) }.toStrWithStripTrailing()} -> " +
+        "${this.sell?.avgPrice()?.let { OrderStep.calculateOrderStepPrice(it) }?.toStrWithStripTrailing()} , " +
+        "${this.buy.totalPrice().toStrWithScale(1)} 중 ${this.profit?.toStrWithScale(1)} 원 $profitStr " +
+        "(${this.sellType.toInfoString()})"
     } else {
       // 주문완료되지 않은 것에 대한 String은...?
       "[${this.buy.createdAt.toHourAndMinuteString()}] " +

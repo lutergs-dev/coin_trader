@@ -33,12 +33,6 @@ class ManagerService(
     return this.initWorker().collectList()
   }
 
-  @PostConstruct
-  fun test() {
-    this.findApplicableCoin(10)
-      .block()
-  }
-
   private fun initWorker(): Flux<Boolean> {
     return this.upbitClient.account.getAccount()
       .filter { it.currency == "KRW" }

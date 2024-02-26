@@ -33,9 +33,14 @@ fun Double.toStrWithScale(point: Int = 2): String {
 }
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("HH'시' mm'분'")
+private val dateTimeShortFormatter = DateTimeFormatter.ofPattern("HH':'mm")
 
 fun OffsetDateTime.toHourAndMinuteString(): String {
   return this.toLocalDateTime().format(dateTimeFormatter)
+}
+
+fun OffsetDateTime.toHourAndMinuteShortStr(): String {
+  return this.toLocalDateTime().format(dateTimeShortFormatter)
 }
 
 /**
