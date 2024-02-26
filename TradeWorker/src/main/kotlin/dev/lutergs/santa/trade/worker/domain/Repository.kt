@@ -2,6 +2,7 @@ package dev.lutergs.santa.trade.worker.domain
 
 import dev.lutergs.santa.trade.worker.domain.entity.DangerCoinMessage
 import dev.lutergs.santa.trade.worker.domain.entity.TradeResultMessage
+import dev.lutergs.santa.trade.worker.domain.entity.SellPhase
 import dev.lutergs.santa.trade.worker.domain.entity.WorkerTradeResult
 import dev.lutergs.santa.trade.worker.infra.KafkaMessageResponse
 import dev.lutergs.santa.util.SellType
@@ -19,7 +20,7 @@ interface MessageSender {
 
 interface Trader {
   // 현재 보유한 코인을 시장가로 판매
-  fun sellMarket(wtr: WorkerTradeResult, sellType: SellType): Mono<WorkerTradeResult>
+  fun sellMarket(wtr: WorkerTradeResult, sellPhase: SellPhase): Mono<WorkerTradeResult>
 
   // 코인을 시장가로 구매 후 TradeResult 반환
   fun buyMarket(market: MarketCode, money: BigDecimal): Mono<WorkerTradeResult>

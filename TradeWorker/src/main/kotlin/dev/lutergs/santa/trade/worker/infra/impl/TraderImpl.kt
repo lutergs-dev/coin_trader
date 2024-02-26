@@ -1,6 +1,7 @@
 package dev.lutergs.santa.trade.worker.infra.impl
 
 import dev.lutergs.santa.trade.worker.domain.Trader
+import dev.lutergs.santa.trade.worker.domain.entity.SellPhase
 import dev.lutergs.santa.trade.worker.domain.entity.WorkerTradeResult
 import dev.lutergs.santa.trade.worker.infra.KafkaMessage
 import dev.lutergs.santa.trade.worker.infra.KafkaProxyMessageSender
@@ -29,18 +30,17 @@ class TraderImpl (
   private val logger = LoggerFactory.getLogger(TraderImpl::class.java)
 
   // 현재 보유한 코인을 시장가로 판매
-  override fun sellMarket(wtr: WorkerTradeResult, sellType: SellType): Mono<WorkerTradeResult> {
+  override fun sellMarket(wtr: WorkerTradeResult, sellPhase: SellPhase): Mono<WorkerTradeResult> {
     return PlaceOrderRequest(wtr.buy.market, OrderType.MARKET, OrderSide.ASK, volume = wtr.buy.totalVolume())
       .let { req ->
         this.client.order.placeOrder(req)
           .flatMap { this.waitOrderUntilComplete(it.uuid) }
-          .flatMap { Mono.fromCallable { wtr.completeSellOrder(it, sellType) } }
-          .doOnNext {  }
+          .flatMap { Mono.fromCallable { wtr.completeSellOrder(it, sellPhase) } }
           .flatMap {
             this.kafkaProxyMessageSender.sendPost(this.topicName, KafkaMessage(key = it.buy.uuid.toString(), value = it))
               .thenReturn(it)
               .onErrorResume { err ->
-                this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${wtr}, sellType: ${sellType.name}", err)
+                this.logger.error("시장가 저장 Kafka 전송시 에러가 발생했습니다! dto : ${wtr}, sellPhase: ${sellPhase.name}", err)
                 Mono.fromCallable { it }
               }
           }

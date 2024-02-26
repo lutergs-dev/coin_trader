@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "dev.lutergs"
-version = "0.1.11"
+version = "0.1.12"
 
 java {
   sourceCompatibility = JavaVersion.VERSION_21
@@ -24,19 +24,19 @@ dependencies {
   implementation(project(":Util"))
 
   implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.2")
-  implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.0.4")
-  implementation("org.springframework.kafka:spring-kafka:3.0.10")
+  implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive:3.2.1")
+  implementation("org.springframework.kafka:spring-kafka:3.0.12")
 
-  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
+  implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
 
   implementation("com.google.code.gson:gson:2.10.1")
 
   implementation("io.projectreactor.kotlin:reactor-kotlin-extensions:1.2.2")
-  implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.1")
+  implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.3")
 
   testImplementation("org.springframework.boot:spring-boot-starter-test:3.2.2")
-  testImplementation("io.projectreactor:reactor-test:3.5.4")
+  testImplementation("io.projectreactor:reactor-test:3.6.2")
   testImplementation("org.springframework.kafka:spring-kafka-test:3.0.10")
 }
 

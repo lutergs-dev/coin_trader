@@ -93,14 +93,14 @@ class Worker(
         this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
         when {
           // 이득점 도달시, 이동평균추세가 꺾이면 판매
-          status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.PROFIT)
+          status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellPhase.PHASE_1)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext {
               logger.info("코인이 이득점인 ${profitPrice.toStrWithStripTrailing()}원보다 높고, 상승추세가 꺾였습니다. (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.")
             }
           // 손실점 도달시 판매
-          status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.LOSS)
+          status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellPhase.PHASE_1)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext {
               logger.info("코인이 손실점인 ${lossPrice.toStrWithStripTrailing()}원보다 낮습니다. (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
@@ -144,11 +144,11 @@ class Worker(
       .flatMap { status ->
         this.logCurrentStatus(workerTradeResult.buy.createdAt, profitPrice, lossPrice, buyPrice, status, logger)
         when {
-          status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellType.STOP_PROFIT)
+          status.currentPrice >= profitPrice && status.isSellPoint -> this.trader.sellMarket(workerTradeResult, SellPhase.PHASE_2)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext { logger.info("코인이 이득점인 ${profitPrice.toStrWithStripTrailing()}원보다 높습니다 (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("이익 매도가 완료되었습니다.") }
-          status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellType.STOP_LOSS)
+          status.currentPrice <= lossPrice -> this.trader.sellMarket(workerTradeResult, SellPhase.PHASE_2)
             .flatMap { isEnd.set(true); Mono.fromCallable { it } }
             .doOnNext { logger.info("코인이 손실점인 ${lossPrice.toStrWithStripTrailing()}원보다 낮습니다 (${status.currentPrice.toStrWithStripTrailing()}원). 현재 가격으로 매도했습니다.")
               logger.info("손실 매도가 완료되었습니다.") }
@@ -160,12 +160,10 @@ class Worker(
       .flatMap {
         if (!isEnd.get()) {
           logger.info("${(this.tradePhase.totalWaitMinute().toDouble() / 60.0).toStrWithScale(1)} 시간동안 기다렸지만 매매가 되지 않아, 현재 가격으로 매도합니다.")
-          this.priceTracker.getCoinCurrentPrice(workerTradeResult)
-            .flatMap { currentPrice ->
-              val profit = workerTradeResult.buy.totalPrice() - (currentPrice * workerTradeResult.buy.avgPrice()) - (workerTradeResult.buy.paidFee * BigDecimal(2.0))
-              val type = if (profit > BigDecimal.ZERO) SellType.TIMEOUT_PROFIT else SellType.TIMEOUT_LOSS
-              this.trader.sellMarket(workerTradeResult, type)
-                .doOnNext { logger.info("시간초과 ${if (currentPrice > it.buy.avgPrice()) "이익" else "손실"} 매도가 완료되었습니다.") }
+          this.trader.sellMarket(workerTradeResult, SellPhase.TIMEOUT)
+            .doOnNext { wtr ->
+              val type = wtr.profit?.let { if (it > BigDecimal.ZERO) "이익" else "손실" } ?: "매도실패"
+              logger.info("시간초과 $type 매도가 완료되었습니다.")
             }
         } else {
           Mono.fromCallable { it }
