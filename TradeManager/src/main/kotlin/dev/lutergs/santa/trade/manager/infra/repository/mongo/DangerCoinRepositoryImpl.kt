@@ -17,16 +17,16 @@ import java.time.Duration
 import java.time.OffsetDateTime
 
 
-@Document("danger_coins")
+@Document("danger_coin_list")
 class DangerCoinEntity {
   @Id
   var coinName: String? = null
 
   @Field
-  @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 2)
-  var expireIn12h: OffsetDateTime = OffsetDateTime.now()
+  @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 3)
+  var expireIn: OffsetDateTime = OffsetDateTime.now()
 
-  fun toDangerCoin(): DangerCoin = DangerCoin(this.coinName!!, this.expireIn12h)
+  fun toDangerCoin(): DangerCoin = DangerCoin(this.coinName!!, this.expireIn)
 }
 
 
