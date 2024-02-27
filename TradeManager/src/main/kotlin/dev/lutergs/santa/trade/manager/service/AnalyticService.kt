@@ -56,4 +56,11 @@ class AnalyticService(
           .toMessage(lastHour)
       } }.flatMap { this.messageSender.sendMessage(it) }
   }
+
+
+  fun createChartOfFinishedOrders() {
+
+  }
+
+
 }

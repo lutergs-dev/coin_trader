@@ -1,4 +1,4 @@
-package dev.lutergs.santa.trade.manager.infra.repository.mongo
+package dev.lutergs.santa.trade.manager.infra.repository
 
 import dev.lutergs.santa.trade.manager.domain.DangerCoinRepository
 import dev.lutergs.santa.trade.manager.domain.entity.DangerCoin

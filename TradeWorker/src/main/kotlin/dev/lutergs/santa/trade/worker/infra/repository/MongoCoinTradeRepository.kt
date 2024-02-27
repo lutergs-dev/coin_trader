@@ -17,7 +17,7 @@ import java.time.ZoneId
 import java.util.*
 
 
-@Document("coin_price_history")
+@Document("coin_trade_price_history")
 class MongoCoinPriceEntity {
   @Id
   var id: String? = null
@@ -27,8 +27,8 @@ class MongoCoinPriceEntity {
   var tradeId: UUID = UUID.randomUUID()
 
   @Field
-  @Indexed(name = "expration_index", expireAfterSeconds = 3600 * 5)
-  var expireIn5h: OffsetDateTime = OffsetDateTime.now()
+  @Indexed(name = "expration_index", expireAfterSeconds = 3600 * 24)
+  var expireIn: OffsetDateTime = OffsetDateTime.now()
 
   @Field
   var price: BigDecimal = BigDecimal.ZERO
@@ -39,7 +39,7 @@ class MongoCoinPriceEntity {
       tickerResponse: TickerResponse
     ): MongoCoinPriceEntity = MongoCoinPriceEntity().apply {
       this.tradeId = workerTradeResult.buy.uuid
-      this.expireIn5h = OffsetDateTime.ofInstant(
+      this.expireIn = OffsetDateTime.ofInstant(
         Instant.ofEpochMilli(tickerResponse.tradeTimestamp),
         ZoneId.of("Asia/Seoul")
       )

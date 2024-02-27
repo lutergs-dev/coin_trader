@@ -44,10 +44,3 @@ custom:
     topic: ${MESSAGE_SENDER_TOPIC:'topic'}
     username: ${MESSAGE_SENDER_USERNAME:'username'}
     password: ${MESSAGE_SENDER_PASSWORD:'password'}
-
-universal:
-  db:
-    influx:
-      host-url: ${INFLUX_HOST_URL:'http://localhost'}
-      token: ${INFLUX_TOKEN:'abc'}
-      database: ${INFLUX_DATABASE:'database'}

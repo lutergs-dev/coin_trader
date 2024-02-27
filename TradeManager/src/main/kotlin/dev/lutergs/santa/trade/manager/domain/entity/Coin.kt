@@ -12,3 +12,7 @@ data class DangerCoin (
     return "[${this.createdAt.toHourAndMinuteString()}] ${this.coinName} 손실 발생"
   }
 }
+
+data class CoinPriceHistory(
+  val test: String
+)

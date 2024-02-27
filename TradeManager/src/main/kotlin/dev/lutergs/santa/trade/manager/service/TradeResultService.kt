@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import dev.lutergs.santa.trade.manager.domain.TradeResultRepository
 import dev.lutergs.santa.trade.manager.domain.entity.ManagerTradeResult
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.knowm.xchart.XYChartBuilder
 import org.springframework.kafka.annotation.KafkaListener
 
 class TradeResultService(
@@ -16,6 +17,7 @@ class TradeResultService(
   fun consume(record: ConsumerRecord<String, String>) {
     record.value()
       .let { this.objectMapper.readValue(it, ManagerTradeResult::class.java) }
+      .also {}
       .let { this.tradeResultRepository.save(it) }
       .block()
   }
