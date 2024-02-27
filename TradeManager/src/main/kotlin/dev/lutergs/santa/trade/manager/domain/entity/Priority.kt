@@ -29,7 +29,11 @@ class Priority(
     val ordBookLen = orderbook.orderbookUnits.size
     return orderbook.orderbookUnits
       .mapIndexed { idx, data -> (data.bidSize * data.bidPrice - data.askSize * data.askPrice) * ((BigDecimal(ordBookLen) - BigDecimal(idx)) / BigDecimal(ordBookLen)) }
-      .reduce {a, b -> a + b}
+      .let {
+        // TODO : 왜 empty 로 들어오는지에 대한 검증 필요
+        if (it.isEmpty()) BigDecimal.ZERO
+        else it.reduce {a, b -> a + b}
+      }
   }
 
   val isGoUp: Boolean = takeIf { this.high.timestamp < this.low.timestamp }

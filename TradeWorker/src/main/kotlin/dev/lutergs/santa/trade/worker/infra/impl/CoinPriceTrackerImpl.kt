@@ -38,7 +38,7 @@ class CoinPriceTrackerImpl(
   }
 
   override fun getAvgOfLatestAB(buyUUID: UUID, latestA: Int, latestB: Int): Mono<Pair<BigDecimal, BigDecimal>> {
-    return this.repository.findAllByTradeIdOrderByExpireIn5hDesc(buyUUID, Pageable.ofSize(latestA))
+    return this.repository.findAllByTradeIdOrderByExpireInDesc(buyUUID, Pageable.ofSize(latestA))
       .retryWhen(RetrySpec.backoff(5, Duration.ofSeconds(1)))
       .collectList()
       .flatMap { list -> Mono.fromCallable { Pair(

@@ -27,7 +27,7 @@ class MongoCoinPriceEntity {
   var tradeId: UUID = UUID.randomUUID()
 
   @Field
-  @Indexed(name = "expration_index", expireAfterSeconds = 3600 * 24)
+  @Indexed(name = "expiration_index", expireAfterSeconds = 3600 * 24)
   var expireIn: OffsetDateTime = OffsetDateTime.now()
 
   @Field
@@ -51,5 +51,5 @@ class MongoCoinPriceEntity {
 @Repository
 interface MongoCoinPriceReactiveRepository: ReactiveMongoRepository<MongoCoinPriceEntity, UUID> {
   fun findAllByTradeId(tradeId: UUID): Flux<MongoCoinPriceEntity>
-  fun findAllByTradeIdOrderByExpireIn5hDesc(tradeId: UUID, pageable: Pageable): Flux<MongoCoinPriceEntity>
+  fun findAllByTradeIdOrderByExpireInDesc(tradeId: UUID, pageable: Pageable): Flux<MongoCoinPriceEntity>
 }
