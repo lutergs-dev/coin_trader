@@ -11,7 +11,7 @@ class WorkerTradeResult: TradeResult {
   constructor(buy: OrderResponse)
     : super(buy, null, SellType.NULL)
   private constructor(buy: OrderResponse, sell: OrderResponse, sellPhase: SellPhase)
-    : super(buy, sell, sellPhase.toSellType(TradeResult(buy, sell, SellType.NULL)))
+    : super(buy, sell, sellPhase.toSellType(TradeResult(buy, sell, SellType.PROFIT))) // TODO : SellType.PROFIT 으로 넣는거 말고 더 나이스한 방법 필요
   private constructor(buy: OrderResponse, sell: OrderResponse, sellType: SellType)
     : super(buy, sell, sellType)
 
